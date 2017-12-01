@@ -386,7 +386,7 @@ None.
 
 **4. System Architecture**
 
-
+[System Architecture](REAL System Architcture.png)
 
 The system revolves around the X server, which is the System which actually controls client/applications on the user&#39;s display. The X server sends information about Windows currently on the screen and the Window manager in turn responds with requests on how Windows Should be handled. Applications Send information on how they would like to be handled to the X Server which sends the information to the Window Manager, though these requests do not have to be fulfilled. Components such as the task bar and menu are separate programs that will come packaged with the Window Manager, and also interact With the Window Manager through the X Server. The X Server is the also the System which writes information to the display. The X Server also receives input from the mouse and keyboard, which is relayed to the Window Manager, which is also responsible for deciding how to handle this input.
 
@@ -394,7 +394,7 @@ The system revolves around the X server, which is the System which actually cont
 
 **5.1 LDS for Window Manager System**
 
- 
+[LDS For System](LDS.png) 
 
 The _User_ inputs data(via keyboard or mouse) to the _Window Manager_, which waits to receive data from the user. Applications which run on the _Display_ send requests to the _Window Manager_ as to how they would like to be shown on the _Display_, but the _Window Manager_ is not required to honor these requests and can manage the _Application Window_ however it chooses. The _Window Manager_ writes the desired bitmap to the _Display_ which illustrates the changes to the user. _Window Managers_ must be prepared to interact with multiple displays in case of multi monitor setups or users using multiple terminals(e.g. via SSH). The graph is actually slightly false, as the display does in fact send information to the window manager; at start up the Display will send information about itself to the Window Manager(e.g. it&#39;s resolution) though this exchange only occurs once at startup so it isn&#39;t included.
 
