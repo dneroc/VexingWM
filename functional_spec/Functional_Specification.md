@@ -386,7 +386,7 @@ None.
 
 **4. System Architecture**
 
-[System Architecture](REAL System Architcture.png)
+[System Architecture](REAL System Architecture.png)
 
 The system revolves around the X server, which is the System which actually controls client/applications on the user&#39;s display. The X server sends information about Windows currently on the screen and the Window manager in turn responds with requests on how Windows Should be handled. Applications Send information on how they would like to be handled to the X Server which sends the information to the Window Manager, though these requests do not have to be fulfilled. Components such as the task bar and menu are separate programs that will come packaged with the Window Manager, and also interact With the Window Manager through the X Server. The X Server is the also the System which writes information to the display. The X Server also receives input from the mouse and keyboard, which is relayed to the Window Manager, which is also responsible for deciding how to handle this input.
 
