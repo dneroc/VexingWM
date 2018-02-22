@@ -1,0 +1,7 @@
+# Start programs
+xclock &
+xterm &
+xeyes &
+
+# Start window manager
+exec ./wm
