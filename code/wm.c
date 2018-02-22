@@ -13,6 +13,11 @@ XWindowAttributes attr;	//attributes of a window
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 
+void onMapRequest(XEvent *ev)
+{
+	
+}
+
 void handleButtRelease(XEvent *ev)
 {
 	//reset start
@@ -73,6 +78,17 @@ void eventLoop()
 		case ButtonPress:	handleButton(&ev);
 		case ButtonRelease:	handleButtRelease(&ev); //;)
 		case MotionNotify: 	handleMotion(&ev);
+		case MapRequest:	onMapRequest(&ev);
+
+
+
+
+
+
+
+
+
+
 	}
 }
 
