@@ -1,6 +1,6 @@
-#include <stdio.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
+#include <stdlib.h>
 
 //Max function for setting minimum window size
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -56,7 +56,7 @@ void handleKey(XEvent *ev)
         XRaiseWindow(disp, ev -> xkey.subwindow);
 	}
 
-	if(ev -> xkey.state == Mod1Mask && ev -> xkey.subwindow != None && ev -> xkey.keycode == XKeysymToKeycode(disp,XK_F2))
+	if(ev -> xkey.state == Mod1Mask && ev -> xkey.subwindow != None && ev -> xkey.keycode == XKeysymToKeycode(disp,XK_Tab))
 	{
 		system("xterm &");
 	}
@@ -88,6 +88,9 @@ int main(void)
 
 	//Alt + F2
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
+	
+	//Alt + Tab
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 
 	//Alt + Left mouse click
     XGrabButton(disp, 1, Mod1Mask, DefaultRootWindow(disp), True,
