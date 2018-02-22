@@ -49,11 +49,17 @@ void handleButton(XEvent *ev)
 void handleKey(XEvent *ev)
 {
 	//Event to raise focused window with Alt+F2
-	//TODO: Change to F1, put in function. Future will have to run by clicking window, when in focus
+	//TODO:Future will have to run by clicking window, when in focus
+
+	if(ev -> xkey.state == Mod1Mask && ev -> xkey.subwindow != None && ev -> xkey.keycode == XKeysymToKeycode(disp,XK_F1))
+	{
+        XRaiseWindow(disp, ev -> xkey.subwindow);
+	}
+
 	if(ev -> xkey.state == Mod1Mask && ev -> xkey.subwindow != None && ev -> xkey.keycode == XKeysymToKeycode(disp,XK_F2))
-		{
-            XRaiseWindow(disp, ev -> xkey.subwindow);
-		}
+	{
+		system("xterm &");
+	}
 
 }
 
