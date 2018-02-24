@@ -10,6 +10,29 @@ XWindowAttributes attr;	//attributes of a window
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 
+//EventMasks, only sends events of this type
+//Send events when this combination of buttons/keys/modifiers is pressed
+void setMasks(){
+	//Alt + F1
+    XGrabKey(disp, XKeysymToKeycode(disp, XK_F1), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + F2
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
+	
+	//Alt + Tab
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
+	
+	//Alt + Esc
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + Left mouse click
+    XGrabButton(disp, 1, Mod1Mask, DefaultRootWindow(disp), True,
+            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+
+	//Alt + Right mouse click
+    XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), True,
+            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+}
 
 void handleButtRelease(XButtonReleasedEvent ev){
 	//reset start
@@ -43,21 +66,26 @@ void handleButton(XButtonEvent ev)
 
 void handleKey(XKeyEvent ev)
 {
-	//Event to raise focused window with Alt+F2
+	//Event to raise focused window with Alt+F1
 	//TODO:Future will have to run by clicking window, when in focus
 
 	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_F1)){
         XRaiseWindow(disp, ev.subwindow);
 	}
-
+	
+	//Alt + Tab creates new xclock
 	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
 		system("xclock &");
+	}
+
+	//Alt + Escape quits window manager
+	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
+		XCloseDisplay(disp);
 	}
 
 }
 
 //Event loop for intercepting different types of events
-
 void eventLoop()
 {
 	XNextEvent(disp, &ev);
@@ -79,25 +107,8 @@ int main(void)
 
     if(!(disp = XOpenDisplay(0x0))) return 1; //fail if can't connect
 
-	//EventMasks, only sends events of this type
-	//Send events when this combination of buttons/keys/modifiers is pressed
-	//Alt + F1
-    XGrabKey(disp, XKeysymToKeycode(disp, XK_F1), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 
-	//Alt + F2
-	XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
-	
-	//Alt + Tab
-	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
-
-	//Alt + Left mouse click
-    XGrabButton(disp, 1, Mod1Mask, DefaultRootWindow(disp), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-
-	//Alt + Right mouse click
-    XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-
+	setMasks();
     start.subwindow = None;
     while(True){
 		//basic X event loop

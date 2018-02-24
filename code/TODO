@@ -4,3 +4,4 @@ Change window raise to mouse click
 Add title bar
 Dragging window by moving title bar
 Destroy window
+Error handling if another window manager exists
