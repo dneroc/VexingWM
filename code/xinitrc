@@ -4,4 +4,4 @@ xterm &
 xeyes &
 
 # Start window manager
-exec ./wm
+./wm

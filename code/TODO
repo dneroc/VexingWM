@@ -1,3 +1,6 @@
 Add in a wallpaper when opened, check previous code
 Change focus to window pressed
 Change window raise to mouse click
+Add title bar
+Dragging window by moving title bar
+Destroy window
