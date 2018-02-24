@@ -18,6 +18,9 @@ void setMasks(){
 
 	//Alt + F2
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + F4
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 	
 	//Alt + Tab
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
@@ -74,12 +77,18 @@ void handleKey(XKeyEvent ev)
 	}
 	
 	//Alt + Tab creates new xclock
-	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
+	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
 		system("xclock &");
 	}
 
+	//Alt + F4 closes window
+	//BUG: Xclock does not close fully close, just the inside
+	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_F4)){
+		XDestroySubwindows(disp, ev.subwindow);
+	}
+
 	//Alt + Escape quits window manager
-	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
+	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
 		XCloseDisplay(disp);
 	}
 
