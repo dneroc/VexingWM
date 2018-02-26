@@ -1,6 +1,3 @@
-// Racial segregation
-
-
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <stdlib.h>
@@ -12,6 +9,8 @@ Display * disp;			//main display
 XWindowAttributes attr;	//attributes of a window
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
+::std::unordered_map<Window, Window> openClients;
+
 
 //EventMasks, only sends events of this type
 void setMasks(){
@@ -68,6 +67,7 @@ void reparentWindow(Window window){
 	XReparentWindow(disp, window, parent, 0, 0);
 	//Displays parent window(frame)
 	XMapWindow(disp, parent);
+        openClients[window] = parent;
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -130,7 +130,7 @@ void handleKey(XKeyEvent ev)
 	
 	//Alt + Tab creates new xclock
 	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-		system("xclock &");
+		system("urxvtv &");
 	}
 
 	//Alt + F4 closes window
@@ -144,6 +144,17 @@ void handleKey(XKeyEvent ev)
 		XCloseDisplay(disp);
 	}
 
+ }
+
+void hadnleUnmapNotify(Window window) {
+
+    const Window frame = openClients[window];
+    XUnmapWindow(disp, frame);
+    XReParentWindow(disp, window, DefaultRootWindow(disp),0, 0);
+    XRemoveFromSaveSet(disp, window);
+    XDestroyWindow(disp, frame);
+    openClients.erase(window);
+
 }
 
 //Event loop for intercepting different types of events
@@ -152,12 +163,13 @@ void eventLoop()
 	XNextEvent(disp, &ev);
 	
 	switch(ev.type){
-		case KeyPress:			handleKey(ev.xkey);					break;
-		case ButtonPress:		handleButton(ev.xbutton);			break;
-		case ButtonRelease:		handleButtRelease(ev.xbutton);		break;
-		case MotionNotify: 		handleMotion(ev.xmotion);			break;
-		case MapRequest:		handleMapRequest(ev.xmaprequest);	break;
+		case KeyPress:			handleKey(ev.xkey);		break;
+		case ButtonPress:		handleButton(ev.xbutton);	break;
+		case ButtonRelease:		handleButtRelease(ev.xbutton);	break;
+		case MotionNotify: 		handleMotion(ev.xmotion);	break;
+		case MapRequest:		handleMapRequest(ev.xmaprequest); break;
 		case ConfigureRequest:	handleConfigRequest(ev.xconfigurerequest); break;
+                case UnmapNotify:       handleUnmapNotify(ev.xunmap); break;
 	}
 }
 
