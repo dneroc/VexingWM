@@ -2,7 +2,7 @@
 
 set -e
 
-make 
+#make 
 
 XEPHYR=$(whereis -b Xephyr | cut -f2 -d' ')
 xinit ./xinitrc -- \
