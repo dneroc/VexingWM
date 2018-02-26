@@ -42,6 +42,23 @@ void setMasks(){
 	XSelectInput(disp, DefaultRootWindow(disp), SubstructureRedirectMask);
 }
 
+//Fixes xterm being tiny when reparented and sets a minium window size
+void handleConfigRequest(XConfigureRequestEvent ev){
+	
+	XWindowChanges ch;
+
+	ch.x = ev.x;
+	ch.y = ev.y;
+	//Set minimum width and height of new windows
+	ch.width = MAX(100, ev.width);
+	ch.height = MAX(100, ev.height);
+	ch.border_width = ev.border_width;
+	ch.sibling = ev.above;
+	ch.stack_mode = ev.detail;
+
+	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
+}
+
 void reparent(Window window){
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
@@ -49,8 +66,11 @@ void reparent(Window window){
 	//Setting parent window charechtaristics, last 3: border width, colour and background
 	//TODO: Create variables to simply change attributes
 	//TODO: Create title bar
-	//BUG: Terminal is not the correct sizes
+	//BUG: Crashes when trying to move window (XReparentWindow: BadMatch)
 	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height, 2, 0x6F777C, 0xFFFFFF);
+
+	//Save set for if the window manager crashes and becuase of reparenting, the child window survives
+	XAddToSaveSet(disp, window);
 
 	//Reparents child window
 	XReparentWindow(disp, window, parent, 0, 0);
@@ -82,6 +102,7 @@ void handleMotion(XMotionEvent ev)
         XMoveResizeWindow(disp, start.subwindow,
         attr.x + (start.button==1 ? xdiff : 0),
         attr.y + (start.button==1 ? ydiff : 0),
+		//Minimum size of a window
         MAX(100, attr.width + (start.button==3 ? xdiff : 0)),
         MAX(100, attr.height + (start.button==3 ? ydiff : 0)));
     }
@@ -130,11 +151,12 @@ void eventLoop()
 	XNextEvent(disp, &ev);
 	
 	switch(ev.type){
-		case KeyPress:		handleKey(ev.xkey);			
-		case ButtonPress:	handleButton(ev.xbutton);		
-		case ButtonRelease:	handleButtRelease(ev.xbutton);	
-		case MotionNotify: 	handleMotion(ev.xmotion);
-		case MapRequest:	handleMapRequest(ev.xmaprequest);	
+		case KeyPress:			handleKey(ev.xkey);			
+		case ButtonPress:		handleButton(ev.xbutton);		
+		case ButtonRelease:		handleButtRelease(ev.xbutton);	
+		case MotionNotify: 		handleMotion(ev.xmotion);
+		case MapRequest:		handleMapRequest(ev.xmaprequest);
+		case ConfigureRequest:	handleConfigRequest(ev.xconfigurerequest);
 	}
 }
 
