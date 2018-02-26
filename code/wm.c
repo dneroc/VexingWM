@@ -11,8 +11,10 @@ XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 
 //EventMasks, only sends events of this type
-//Send events when this combination of buttons/keys/modifiers is pressed
 void setMasks(){
+
+	//Send events when this combination of buttons/keys/modifiers is pressed
+	
 	//Alt + F1
     XGrabKey(disp, XKeysymToKeycode(disp, XK_F1), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 
@@ -35,7 +37,35 @@ void setMasks(){
 	//Alt + Right mouse click
     XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), True,
             ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+
+	//Events for reparenting 
+	XSelectInput(disp, DefaultRootWindow(disp), SubstructureRedirectMask);
 }
+
+void reparent(Window window){
+	//Attributes of origial window
+	XGetWindowAttributes(disp, window, &attr);
+
+	//Setting parent window charechtaristics, last 3: border width, colour and background
+	//TODO: Create variables to simply change attributes
+	//TODO: Create title bar
+	//BUG: Terminal is not the correct sizes
+	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height, 2, 0x6F777C, 0xFFFFFF);
+
+	//Reparents child window
+	XReparentWindow(disp, window, parent, 0, 0);
+	//Displays parent window(frame)
+	XMapWindow(disp, parent);
+}
+
+void handleMapRequest(XMapRequestEvent ev){
+
+	reparent(ev.window);
+
+	//Remaps the child window
+	XMapWindow(disp, ev.window);
+}
+
 
 void handleButtRelease(XButtonReleasedEvent ev){
 	//reset start
@@ -82,7 +112,7 @@ void handleKey(XKeyEvent ev)
 	}
 
 	//Alt + F4 closes window
-	//BUG: Xclock does not close fully close, just the inside
+	//BUG: Xclock does not close fully close, just the inside, may be just window instead of subwindow
 	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_F4)){
 		XDestroySubwindows(disp, ev.subwindow);
 	}
@@ -100,13 +130,11 @@ void eventLoop()
 	XNextEvent(disp, &ev);
 	
 	switch(ev.type){
-		case KeyPress:			handleKey(ev.xkey);			
-								
-		case ButtonPress:		handleButton(ev.xbutton);		
-								
-		case ButtonRelease:		handleButtRelease(ev.xbutton);	
-								
-		case MotionNotify: 		handleMotion(ev.xmotion);	
+		case KeyPress:		handleKey(ev.xkey);			
+		case ButtonPress:	handleButton(ev.xbutton);		
+		case ButtonRelease:	handleButtRelease(ev.xbutton);	
+		case MotionNotify: 	handleMotion(ev.xmotion);
+		case MapRequest:	handleMapRequest(ev.xmaprequest);	
 	}
 }
 

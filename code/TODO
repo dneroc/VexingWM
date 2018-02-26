@@ -1,7 +1,8 @@
+Add title bar, reparent windows
 Add in a wallpaper when opened, check previous code
 Change focus to window pressed
 Change window raise to mouse click
-Add title bar
 Dragging window by moving title bar
 Destroy window
 Error handling if another window manager exists
+Mouse pointer not showing, create one 
