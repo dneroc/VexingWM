@@ -42,37 +42,26 @@ void setMasks(){
             ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 
 	//Events for reparenting 
-	XSelectInput(disp, DefaultRootWindow(disp), SubstructureRedirectMask);
+	XSelectInput(disp, DefaultRootWindow(disp), SubstructureRedirectMask |SubstructureNotifyMask);
 }
 
-//Fixes xterm being tiny when reparented and sets a minium window size
-void handleConfigRequest(XConfigureRequestEvent ev){
-	
-	XWindowChanges ch;
-
-	ch.x = ev.x;
-	ch.y = ev.y;
-	//Set minimum width and height of new windows
-	ch.width = MAX(100, ev.width);
-	ch.height = MAX(100, ev.height);
-	ch.border_width = ev.border_width;
-	ch.sibling = ev.above;
-	ch.stack_mode = ev.detail;
-
-	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
+void handleButtRelease(XButtonReleasedEvent ev){
+	//reset start
+	if(ev.type == ButtonRelease)
+    	start.subwindow = None;
 }
 
-void reparent(Window window){
+void reparentWindow(Window window){
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
 
 	//Setting parent window charechtaristics, last 3: border width, colour and background
 	//TODO: Create variables to simply change attributes
-	//TODO: Create title bar
-	//BUG: Crashes when trying to move window (XReparentWindow: BadMatch)
-	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height, 2, 0x6F777C, 0xFFFFFF);
-
-	//Save set for if the window manager crashes and becuase of reparenting, the child window survives
+	//TODO: Create an interactive title bar(move/resize, etc)
+	//TODO: (bug) Crashes when trying to move window (XReparentWindow: BadMatch)
+	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height, 5, 0xFFF000, 0xFFFFFF);
+	
+	//Save set for if the window manager crashes, the reparented window survives
 	XAddToSaveSet(disp, window);
 
 	//Reparents child window
@@ -83,17 +72,26 @@ void reparent(Window window){
 
 void handleMapRequest(XMapRequestEvent ev){
 
-	reparent(ev.window);
+	reparentWindow(ev.window);
 
 	//Remaps the child window
 	XMapWindow(disp, ev.window);
 }
 
+//Fixes xterm being tiny when reparented and sets a minium window size
+void handleConfigRequest(XConfigureRequestEvent ev){
+	
+	XWindowChanges ch;
+	ch.x = ev.x;
+	ch.y = ev.y;
+	//Set minimum width and height of new windows
+	ch.width = /*MAX(100, */ev.width/*)*/;
+	ch.height = /*MAX(100,*/ ev.height/*)*/;
+	ch.border_width = ev.border_width;
+	ch.sibling = ev.above;
+	ch.stack_mode = ev.detail;
 
-void handleButtRelease(XButtonReleasedEvent ev){
-	//reset start
-	if(ev.type == ButtonRelease)
-    	start.subwindow = None;
+	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
 }
 
 void handleMotion(XMotionEvent ev)
@@ -154,12 +152,12 @@ void eventLoop()
 	XNextEvent(disp, &ev);
 	
 	switch(ev.type){
-		case KeyPress:			handleKey(ev.xkey);			
-		case ButtonPress:		handleButton(ev.xbutton);		
-		case ButtonRelease:		handleButtRelease(ev.xbutton);	
-		case MotionNotify: 		handleMotion(ev.xmotion);
-		case MapRequest:		handleMapRequest(ev.xmaprequest);
-		case ConfigureRequest:	handleConfigRequest(ev.xconfigurerequest);
+		case KeyPress:			handleKey(ev.xkey);					break;
+		case ButtonPress:		handleButton(ev.xbutton);			break;
+		case ButtonRelease:		handleButtRelease(ev.xbutton);		break;
+		case MotionNotify: 		handleMotion(ev.xmotion);			break;
+		case MapRequest:		handleMapRequest(ev.xmaprequest);	break;
+		case ConfigureRequest:	handleConfigRequest(ev.xconfigurerequest); break;
 	}
 }
 
@@ -168,8 +166,6 @@ int main(void)
 {
 
     if(!(disp = XOpenDisplay(0x0))) return 1; //fail if can't connect
-
-
 	setMasks();
     start.subwindow = None;
     while(True){
@@ -178,3 +174,4 @@ int main(void)
 
     }
 } 
+
