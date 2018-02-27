@@ -74,6 +74,7 @@ void setMasks(){
 
 void handleButtRelease(XButtonReleasedEvent ev){
 	//reset start
+	cout << "Button release" << endl;
 	if(ev.type == ButtonRelease)
     	start.subwindow = None;
 }
@@ -115,13 +116,16 @@ void reparentWindow(Window window){
 void handleMapRequest(XMapRequestEvent ev){
 
 	reparentWindow(ev.window);
+	cout << "Window reparented" << endl;
 
 	//Remaps the child window
 	XMapWindow(disp, ev.window);
+	cout << "Frame mapped" << endl;
 }
 
 //Fixes xterm being tiny when reparented
 void handleConfigRequest(XConfigureRequestEvent ev){
+
 	XWindowChanges ch;
 	ch.x = ev.x;
 	ch.y = ev.y;
@@ -133,19 +137,28 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 	ch.stack_mode = ev.detail;
 
 	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
+	cout << "Window configured. ID:" << ev.window << endl;
 }
 
 void handleMotion(XMotionEvent ev) {
+	cout << "Motion Event" << endl;
 	//TODO: Handle resizing to include the inner window
 	//TODO: Fix only one title bar being selected
 	int xdiff = ev.x_root - start.x_root;
+
+	cout << "Xdiff: " << xdiff << endl;
+
     int ydiff = ev.y_root - start.y_root;
+
+	cout << "Ydiff: " << ydiff << endl;
 
 	//Move window by dragging title bar
 	if(start.window == title){
+		cout << "Start window move" << endl;
         XMoveWindow(disp, parent,
         attr.x + (start.button==1 ? xdiff : 0),
         attr.y + (start.button==1 ? ydiff : 0));
+		cout << "End window move" << xdiff << ydiff << endl;
 	}
 	
 	//Resize
@@ -153,28 +166,33 @@ void handleMotion(XMotionEvent ev) {
 		XResizeWindow(disp, ev.subwindow,
         MAX(100, attr.width + (start.button==3 ? xdiff : 0)),
         MAX(100, attr.height + (start.button==3 ? ydiff : 0)));
+		cout << "Window resized" << endl;
 		
     }
 }
 
 void handleButton(XButtonEvent ev) {
+	//TODO:(bug) Window resets when moved again
+	//TODO:(bug) Resizing can cause a XConfigureWindow error and crash
+	cout << "Button press event" << endl;
 
 	//Sets the start of the pointer for moving it
 	if(ev.subwindow != None){
-		cout << "Button 3" << endl;
         XGetWindowAttributes(disp, ev.subwindow, &attr);
-        start = ev;
 		XRaiseWindow(disp, ev.subwindow);
+		start = ev;
+		cout << "Button 3 + Alt press" << endl;
     }
 
 	//For pressing on the title bar
-	if(ev.window == title){
+	else if(ev.window == title){
 		Window root, *child = NULL;
 		unsigned int nchild;
-		cout << "Button 1 title" << endl;
 		XQueryTree(disp, ev.window, &root, &parent, &child, &nchild);
+		XGetWindowAttributes(disp, parent, &attr);
 		XRaiseWindow(disp, parent);
 		start = ev;
+		cout << "Button 1 title press" << endl;
 	}	
 }
 
@@ -238,7 +256,7 @@ void eventLoop()
 
 		case ButtonPress:
 			handleButton(ev.xbutton); break;
-
+			
 		case ButtonRelease:		
 			handleButtRelease(ev.xbutton); break;
 
