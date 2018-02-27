@@ -2,7 +2,9 @@
 
 set -e
 
-#make 
+
+gcc -std=c++11 -lX11 wm.cpp 
+
 
 XEPHYR=$(whereis -b Xephyr | cut -f2 -d' ')
 xinit ./xinitrc -- \

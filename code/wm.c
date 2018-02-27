@@ -9,7 +9,7 @@ Display * disp;			//main display
 XWindowAttributes attr;	//attributes of a window
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
-::std::unordered_map<Window, Window> openClients;
+//::std::unordered_map<Window, Window> openClients;
 
 
 //EventMasks, only sends events of this type
@@ -67,7 +67,7 @@ void reparentWindow(Window window){
 	XReparentWindow(disp, window, parent, 0, 0);
 	//Displays parent window(frame)
 	XMapWindow(disp, parent);
-        openClients[window] = parent;
+//        openClients[window] = parent;
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -147,7 +147,7 @@ void handleKey(XKeyEvent ev)
  }
 
 void hadnleUnmapNotify(Window window) {
-
+/*
     const Window frame = openClients[window];
     XUnmapWindow(disp, frame);
     XReParentWindow(disp, window, DefaultRootWindow(disp),0, 0);
@@ -156,7 +156,7 @@ void hadnleUnmapNotify(Window window) {
     openClients.erase(window);
 
 }
-
+*/
 //Event loop for intercepting different types of events
 void eventLoop()
 {
@@ -169,7 +169,7 @@ void eventLoop()
 		case MotionNotify: 		handleMotion(ev.xmotion);	break;
 		case MapRequest:		handleMapRequest(ev.xmaprequest); break;
 		case ConfigureRequest:	handleConfigRequest(ev.xconfigurerequest); break;
-                case UnmapNotify:       handleUnmapNotify(ev.xunmap); break;
+//                case UnmapNotify:       handleUnmapNotify(ev.xunmap); break;
 	}
 }
 

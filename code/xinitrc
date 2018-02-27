@@ -4,4 +4,4 @@ xterm &
 xeyes &
 
 # Start window manager
-./wm
+./a.out
