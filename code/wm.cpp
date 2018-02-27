@@ -22,7 +22,7 @@ XEvent ev;				//event variable
 Window title;			//Titlebar variable
 Window frame; 			//Reparent variable
 Window parent;			//Parent for titlebar move
-
+Window test;			//Test window for closing
 
 ::std::unordered_map<Window, Window> frames;
 
@@ -117,6 +117,7 @@ void handleMapRequest(XMapRequestEvent ev){
 }
 
 //Fixes xterm being tiny when reparented
+//TODO: Double check this comment: //Causes error when window is moved to fast
 void handleConfigRequest(XConfigureRequestEvent ev){
 
 	XWindowChanges ch;
@@ -191,8 +192,6 @@ void handleButton(XButtonEvent ev) {
 		start = ev;
 		cout << "Button 3 + Alt press" << endl;
     }
-
-	
 }
 
 void handleKey(XKeyEvent ev) {
@@ -210,7 +209,7 @@ void handleKey(XKeyEvent ev) {
 	//TODO:(bug) KillClient kills the whole display
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
             XKillClient(disp, ev.window);
-            return;
+            //TODO: Check if this causes the crash: return;
     }
 }
 /*
@@ -235,7 +234,8 @@ void handleKey(XKeyEvent ev) {
 */
 
 void handleUnmapNotify(Window window) {
-    Window frame = frames[window];
+
+    Window frame = openClients[window];
     XUnmapWindow(disp, frame);
     XReparentWindow(disp, window, DefaultRootWindow(disp), 0, 0);
     XRemoveFromSaveSet(disp, window);
@@ -243,6 +243,14 @@ void handleUnmapNotify(Window window) {
     frames.erase(window);
 
 }
+
+void handleCreateNotify(XCreateWindowEvent ev) {}
+
+void handleDestroyNotify(XDestroyWindowEvent ev) {}
+
+void handleReparentNotify(XReparentEvent ev) {}
+
+void handleMapNotify(XMapEvent ev) {}
 
 //Event loop for intercepting different types of events
 void eventLoop()
@@ -270,8 +278,23 @@ void eventLoop()
 
         case UnmapNotify:       
 			handleUnmapNotify(ev.xunmap.window); break;
+
+        case CreateNotify:      
+			handleCreateNotify(ev.xcreatewindow); break;
+
+        case DestroyNotify:             
+			handleDestroyNotify(ev.xdestroywindow); break;
+
+        case ReparentNotify:            
+			handleReparentNotify(ev.xreparent); break;
+
+        case MapNotify:                 
+			handleMapNotify(ev.xmap); break;
 	}
 }
+
+
+//Useless calls
 
 
 int main(void) {
@@ -280,6 +303,8 @@ int main(void) {
     if(!(disp = XOpenDisplay(0x0))) return 1;
 	setMasks();
     start.subwindow = None;
+    test = XCreateSimpleWindow(disp, DefaultRootWindow(disp), 20, 20, 200, 200, 10, 0xFFFFFF, 0x696969);
+    XMapWindow(disp,test);	
     while(True){
 		//basic X event loop		
 		eventLoop();
