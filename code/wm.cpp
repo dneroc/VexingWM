@@ -127,7 +127,6 @@ void handleMotion(XMotionEvent ev)
 		XResizeWindow(disp, ev.subwindow,
         MAX(100, attr.width + (start.button==3 ? xdiff : 0)),
         MAX(100, attr.height + (start.button==3 ? ydiff : 0)));
-
 		
     }
 }
