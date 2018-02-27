@@ -11,9 +11,11 @@
 
 Display * disp;			//main display
 XWindowAttributes attr;	//attributes of a window
+XWindowAttributes titleAttr; //titlebar attributes
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
+Window parent; 			//Reparent variable
 
 
 //::std::unordered_map<Window, Window> clients_;
@@ -39,7 +41,7 @@ void setMasks(){
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 
 	//Alt + Left mouse click
-    XGrabButton(disp, 1, AnyModifier, DefaultRootWindow(disp), True,
+    XGrabButton(disp, 1, Mod1Mask, DefaultRootWindow(disp), True,
             ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 
 	//Alt + Right mouse click
@@ -60,15 +62,13 @@ void reparentWindow(Window window){
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
 
-	//Setting parent window charechtaristics, last 3: border width, colour and background
-	//TODO: Create variables to simply change attributes
 	//TODO: Create an interactive title bar(move/resize, etc)
-
 	int borderWidth = 3;
 	int colour = 0xFFF000;
 	int background = 0xFFFFFF;
 
-	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
+	//Setting parent window charechtaristics, last 3: border width, colour and background
+	parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
 	
 	//Save set for if the window manager crashes, the reparented window survives
 	XAddToSaveSet(disp, window);
@@ -81,10 +81,11 @@ void reparentWindow(Window window){
 
 	int titleColour = 0x000FFF;	
 
+	//Title bar
+	//TODO: change to root display so I can grab indipendantly, move along with the rest of the windows
 	title = XCreateSimpleWindow(disp, parent, attr.x, attr.y, attr.width, 20, 0, 0xFFF000, titleColour);
 
 	XMapWindow(disp, title);
-
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -111,18 +112,23 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
 }
 
+	//TODO: Handle resizing to include the inner window
 void handleMotion(XMotionEvent ev)
 {
 	//If window moved, depending on button pressed, left click move = move, right click + move = resize using alt mod
 	if(start.subwindow != None){
         int xdiff = ev.x_root - start.x_root;
         int ydiff = ev.y_root - start.y_root;
-        XMoveResizeWindow(disp, start.subwindow,
+
+        XMoveWindow(disp, start.subwindow,
         attr.x + (start.button==1 ? xdiff : 0),
-        attr.y + (start.button==1 ? ydiff : 0),
-		//Minimum size of a window
+        attr.y + (start.button==1 ? ydiff : 0));
+
+		XResizeWindow(disp, ev.subwindow,
         MAX(100, attr.width + (start.button==3 ? xdiff : 0)),
         MAX(100, attr.height + (start.button==3 ? ydiff : 0)));
+
+		
     }
 }
 
@@ -131,6 +137,7 @@ void handleButton(XButtonEvent ev)
 	//Sets the start of the pointer for moving it
 	if(ev.subwindow != None){
             XGetWindowAttributes(disp, ev.subwindow, &attr);
+			XGetWindowAttributes(disp, title, &titleAttr);
             start = ev;
 			XRaiseWindow(disp, ev.subwindow);
         }
@@ -138,17 +145,10 @@ void handleButton(XButtonEvent ev)
 
 
 void handleKey(XKeyEvent ev)
-{
-	//Event to raise focused window with Alt+F1
-	//TODO:Future will have to run by clicking window, when in focus
-
-	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_F1)){
-        XRaiseWindow(disp, ev.subwindow);
-	}
-	
-	//Alt + Tab creates new xclock
-	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-		system("xterm &");
+{	
+	//Alt + Tab launches specified program
+	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
+		system("xclock &");
 	}
 
 	//Alt + F4 closes window
