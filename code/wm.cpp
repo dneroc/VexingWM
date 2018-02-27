@@ -172,20 +172,15 @@ void handleMotion(XMotionEvent ev) {
 }
 
 void handleButton(XButtonEvent ev) {
-	//TODO:(bug) Window resets when moved again
 	//TODO:(bug) Resizing can cause a XConfigureWindow error and crash
 	cout << "Button press event" << endl;
-
-	//Sets the start of the pointer for moving it
-	if(ev.subwindow != None){
-        XGetWindowAttributes(disp, ev.subwindow, &attr);
-		XRaiseWindow(disp, ev.subwindow);
-		start = ev;
-		cout << "Button 3 + Alt press" << endl;
-    }
+	
+	//Fixes titles not being reset, allows selection and movement
+	title = ev.window;
 
 	//For pressing on the title bar
-	else if(ev.window == title){
+	if(ev.window == title){
+		
 		Window root, *child = NULL;
 		unsigned int nchild;
 		XQueryTree(disp, ev.window, &root, &parent, &child, &nchild);
@@ -193,7 +188,18 @@ void handleButton(XButtonEvent ev) {
 		XRaiseWindow(disp, parent);
 		start = ev;
 		cout << "Button 1 title press" << endl;
+		title = ev.window;
 	}	
+
+	//Sets the start of the pointer for moving it
+	else if(ev.subwindow != None){
+        XGetWindowAttributes(disp, ev.subwindow, &attr);
+		XRaiseWindow(disp, ev.subwindow);
+		start = ev;
+		cout << "Button 3 + Alt press" << endl;
+    }
+
+	
 }
 
 void handleKey(XKeyEvent ev) {
