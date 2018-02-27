@@ -7,6 +7,9 @@
 #include <memory>
 #include <mutex>
 #include <algorithm>
+#include <iostream>
+
+using namespace std;
 
 
 using ::std::max;
@@ -24,10 +27,11 @@ XWindowAttributes titleAttr; //titlebar attributes
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
-Window parent; 			//Reparent variable
+Window frame; 			//Reparent variable
+Window parent;			//Parent for titlebar move
 
 
-::std::unordered_map<Window, Window> openClients;
+::std::unordered_map<Window, Window> frames;
 
 
 //EventMasks, only sends events of this type
@@ -49,16 +53,14 @@ void setMasks(){
 	//Alt + Esc
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 
-	//Alt + Left mouse click
-    XGrabButton(disp, 1, Mod1Mask, DefaultRootWindow(disp), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+	//Left mouse click
+    //XGrabButton(disp, 1, AnyModifier, DefaultRootWindow(disp), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 
 	//Alt + Right mouse click
-    XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 
 	//Events for reparenting 
-	XSelectInput(disp, DefaultRootWindow(disp), SubstructureRedirectMask |SubstructureNotifyMask);
+	XSelectInput(disp, DefaultRootWindow(disp), SubstructureRedirectMask | SubstructureNotifyMask);
 }
 
 void handleButtRelease(XButtonReleasedEvent ev){
@@ -77,35 +79,34 @@ void reparentWindow(Window window){
 	int background = 0xFFFFFF;
 
 	//Setting parent window charechtaristics, last 3: border width, colour and background
-	parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
+	frame = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
 	
 	//Save set for if the window manager crashes, the reparented window survives
 	XAddToSaveSet(disp, window);
 
 	//Reparents child window
-	XReparentWindow(disp, window, parent, 0, 20);
+	XReparentWindow(disp, window, frame, 0, 20);
 	//Displays parent window(frame)
-	XMapWindow(disp, parent);
-	openClients[window] = parent;
+	XMapWindow(disp, frame);
 
 	int titleColour = 0x000FFF;	
-
 	//Title bar
 	//TODO: change to root display so I can grab indipendantly, move along with the rest of the windows
-	title = XCreateSimpleWindow(disp, parent, attr.x, attr.y, attr.width, 20, 0, 0xFFF000, titleColour);
+	title = XCreateSimpleWindow(disp, frame, attr.x, attr.y, attr.width, 20, 0, 0xFFF000, titleColour);
 
 	XMapWindow(disp, title);
+	//Click on the title bar event
+	XGrabButton(disp, 1, AnyModifier, title, False, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 }
 
 void handleMapRequest(XMapRequestEvent ev){
 
 	reparentWindow(ev.window);
-
 	//Remaps the child window
 	XMapWindow(disp, ev.window);
 }
 
-//Fixes xterm being tiny when reparented and sets a minium window size
+//Fixes xterm being tiny when reparented
 void handleConfigRequest(XConfigureRequestEvent ev){
 	
 	XWindowChanges ch;
@@ -124,43 +125,54 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 void handleMotion(XMotionEvent ev) {
 	//TODO: Handle resizing to include the inner window
 	//If window moved, depending on button pressed, left click move = move, right click + move = resize using alt mod
-	if(start.subwindow != None){
-        int xdiff = ev.x_root - start.x_root;
-        int ydiff = ev.y_root - start.y_root;
+	int xdiff = ev.x_root - start.x_root;
+    int ydiff = ev.y_root - start.y_root;
 
-        XMoveWindow(disp, start.subwindow,
+	if(start.window == title){
+        XMoveWindow(disp, parent,
         attr.x + (start.button==1 ? xdiff : 0),
         attr.y + (start.button==1 ? ydiff : 0));
-
+	}
+		
+	if(start.subwindow != None){
 		XResizeWindow(disp, ev.subwindow,
         MAX(100, attr.width + (start.button==3 ? xdiff : 0)),
         MAX(100, attr.height + (start.button==3 ? ydiff : 0)));
 		
     }
+	
 }
 
 void handleButton(XButtonEvent ev) {
 	//Sets the start of the pointer for moving it
+
 	if(ev.subwindow != None){
+			cout << "Button 3" << endl;
             XGetWindowAttributes(disp, ev.subwindow, &attr);
-			XGetWindowAttributes(disp, title, &titleAttr);
             start = ev;
 			XRaiseWindow(disp, ev.subwindow);
         }
+
+	if(ev.window == title){
+		Window root, *child = NULL;
+		unsigned int nchild;
+		
+		cout << "Button 1 title" << endl;
+		XQueryTree(disp, ev.window, &root, &parent, &child, &nchild);
+		XRaiseWindow(disp, parent);
+		start = ev;
+	}	
 }
 
 
 void handleKey(XKeyEvent ev) {
-	//Event to raise focused window with Alt+F1
-	//TODO:Future will have to run by clicking window, when in focus
-
 	if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_F1)){
         XRaiseWindow(disp, ev.subwindow);
 	}
 	
 	//Alt + Tab creates new xclock
 	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-		system("xterm &");
+		system("xclock &");
 	}
 
 	//Alt + Escape closes window Manager
@@ -200,12 +212,12 @@ void handleKey(XKeyEvent ev) {
 
 void handleUnmapNotify(Window window) {
 
-    const Window frame = openClients[window];
+    Window frame = frames[window];
     XUnmapWindow(disp, frame);
     XReparentWindow(disp, window, DefaultRootWindow(disp),0, 0);
     XRemoveFromSaveSet(disp, window);
     XDestroyWindow(disp, frame);
-    openClients.erase(window);
+    frames.erase(window);
 
 }
 
@@ -226,14 +238,14 @@ void eventLoop()
 }
 
 
-int main(void) {
-
+int main(int argc, char* argv[]) {
     if(!(disp = XOpenDisplay(0x0))) return 1; //fail if can't connect
+
 	setMasks();
     start.subwindow = None;
     while(True){
-		//basic X event loop
-       eventLoop();
+		//basic X event loop		
+		eventLoop();
 
     }
 } 
