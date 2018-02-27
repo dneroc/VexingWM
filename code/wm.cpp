@@ -13,6 +13,7 @@ Display * disp;			//main display
 XWindowAttributes attr;	//attributes of a window
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
+Window title;			//Titlebar variable
 
 
 //::std::unordered_map<Window, Window> clients_;
@@ -39,7 +40,7 @@ void setMasks(){
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 
 	//Alt + Left mouse click
-    XGrabButton(disp, 1, Mod1Mask, DefaultRootWindow(disp), True,
+    XGrabButton(disp, 1, AnyModifier, DefaultRootWindow(disp), True,
             ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 
 	//Alt + Right mouse click
@@ -63,17 +64,21 @@ void reparentWindow(Window window){
 	//Setting parent window charechtaristics, last 3: border width, colour and background
 	//TODO: Create variables to simply change attributes
 	//TODO: Create an interactive title bar(move/resize, etc)
-	//TODO: (bug) Crashes when trying to move window (XReparentWindow: BadMatch)
-	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height, 5, 0xFFF000, 0xFFFFFF);
+	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, 3, 0xFFF000, 0xFFFFFF);
 	
 	//Save set for if the window manager crashes, the reparented window survives
 	XAddToSaveSet(disp, window);
 
 	//Reparents child window
-	XReparentWindow(disp, window, parent, 0, 0);
+	XReparentWindow(disp, window, parent, 0, 20);
 	//Displays parent window(frame)
 	XMapWindow(disp, parent);
-//        openClients[window] = parent;
+	//openClients[window] = parent;
+	
+	title = XCreateSimpleWindow(disp, parent, attr.x, attr.y, attr.width, 20, 0, 0xFFF000, 0x000FFF);
+
+	XMapWindow(disp, title);
+
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -90,9 +95,9 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 	XWindowChanges ch;
 	ch.x = ev.x;
 	ch.y = ev.y;
-	//Set minimum width and height of new windows
-	ch.width = /*MAX(100, */ev.width/*)*/;
-	ch.height = /*MAX(100,*/ ev.height/*)*/;
+	//Can set minimum width and height of new windows
+	ch.width = ev.width;
+	ch.height = ev.height;
 	ch.border_width = ev.border_width;
 	ch.sibling = ev.above;
 	ch.stack_mode = ev.detail;
@@ -121,6 +126,7 @@ void handleButton(XButtonEvent ev)
 	if(ev.subwindow != None){
             XGetWindowAttributes(disp, ev.subwindow, &attr);
             start = ev;
+			XRaiseWindow(disp, ev.subwindow);
         }
 }
 
@@ -136,7 +142,7 @@ void handleKey(XKeyEvent ev)
 	
 	//Alt + Tab creates new xclock
 	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-		system("urxvtv &");
+		system("xterm &");
 	}
 
 	//Alt + F4 closes window
