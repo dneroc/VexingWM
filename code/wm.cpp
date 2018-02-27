@@ -25,6 +25,8 @@ XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
 Window parent; 			//Reparent variable
+Window test;
+
 
 
 ::std::unordered_map<Window, Window> openClients;
@@ -105,6 +107,7 @@ void handleMapRequest(XMapRequestEvent ev){
 	XMapWindow(disp, ev.window);
 }
 
+//Causes error when window is moved to fast
 //Fixes xterm being tiny when reparented and sets a minium window size
 void handleConfigRequest(XConfigureRequestEvent ev){
 	
@@ -151,7 +154,7 @@ void handleButton(XButtonEvent ev) {
 }
 
 
-void handleKey(XKeyEvent ev) {
+void handleKey(XKeyEvent& ev) {
 	//Event to raise focused window with Alt+F1
 	//TODO:Future will have to run by clicking window, when in focus
 
@@ -172,36 +175,16 @@ void handleKey(XKeyEvent ev) {
 
         //Alt+F4 closes window
 	else if(ev.state == Mod1Mask && ev.keycode == XKeysymToKeycode(disp,XK_F4)){
-            XKillClient(disp, ev.window);
-            return;
+            XUnmapWindow(disp, test);
+            XDestroySubwindows(disp, test);
         }
-/*
-                Atom* supported_protocols;
-                int num_supported_protocols;
-                b
-                if(XGetWMProtocols(disp, ev.window,&supported_protocols,&num_supported_protocols) && (::std::find(supported_protocols,supported_protocols + num_supported_protocols,XInternAtom(disp, "WM_DELETE_WINDOW", false)) != supported_protocols + num_supported_protocols)) {
-                    XEvent msg;
-                    memset(&msg, 0, sizeof(msg));
-                    msg.xclient.type = ClientMessage;
-                    msg.xclient.message_type = XInternAtom(disp, "WM_PROTOCOLS", false);
-                    msg.xclient.window = ev.window;
-                    msg.xclient.format = 32;
-                    msg.xclient.data.l[0] = XInternAtom(disp, "WM_DELETE_WINDOW", false);
 
-                    XSendEvent(disp, ev.window, false, 0, &msg);
-                }
-                else {
-                    XKillClient(disp, ev.window);
-               }
-	}
-*/
- 
  }
 
 
 void handleUnmapNotify(Window window) {
 
-    const Window frame = openClients[window];
+    Window frame = openClients[window];
     XUnmapWindow(disp, frame);
     XReparentWindow(disp, window, DefaultRootWindow(disp),0, 0);
     XRemoveFromSaveSet(disp, window);
@@ -209,6 +192,16 @@ void handleUnmapNotify(Window window) {
     openClients.erase(window);
 
 }
+
+
+
+void handleCreateNotify(XCreateWindowEvent ev) {}
+
+void handleDestroyNotify(XDestroyWindowEvent ev) {}
+
+void handleReparentNotify(XReparentEvent ev) {}
+
+void handleMapNotify(XMapEvent ev) {}
 
 //Event loop for intercepting different types of events
 void eventLoop()
@@ -223,8 +216,15 @@ void eventLoop()
 		case MapRequest:		handleMapRequest(ev.xmaprequest); break;
 		case ConfigureRequest:	handleConfigRequest(ev.xconfigurerequest); break;
                 case UnmapNotify:       handleUnmapNotify(ev.xunmap.window); break;
+                case CreateNotify:      handleCreateNotify(ev.xcreatewindow);                 break;
+                case DestroyNotify:             handleDestroyNotify(ev.xdestroywindow);        break;
+                case ReparentNotify:            handleReparentNotify(ev.xreparent);        break;
+                case MapNotify:                 handleMapNotify(ev.xmap);            break;
 	}
 }
+
+
+//Useless calls
 
 
 int main(void) {
@@ -232,10 +232,11 @@ int main(void) {
     if(!(disp = XOpenDisplay(0x0))) return 1; //fail if can't connect
 	setMasks();
     start.subwindow = None;
+    test = XCreateSimpleWindow(disp, DefaultRootWindow(disp), 20, 20, 200, 200, 10, 0xFFFFFF, 0x696969);
+    XMapWindow(disp,test);	
     while(True){
 		//basic X event loop
        eventLoop();
-
     }
 } 
 
