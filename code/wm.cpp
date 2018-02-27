@@ -23,7 +23,6 @@ Window title;			//Titlebar variable
 void setMasks(){
 
 	//Send events when this combination of buttons/keys/modifiers is pressed
-	
 	//Alt + F1
     XGrabKey(disp, XKeysymToKeycode(disp, XK_F1), Mod1Mask, DefaultRootWindow(disp), True, GrabModeAsync, GrabModeAsync);
 
@@ -64,7 +63,12 @@ void reparentWindow(Window window){
 	//Setting parent window charechtaristics, last 3: border width, colour and background
 	//TODO: Create variables to simply change attributes
 	//TODO: Create an interactive title bar(move/resize, etc)
-	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, 3, 0xFFF000, 0xFFFFFF);
+
+	int borderWidth = 3;
+	int colour = 0xFFF000;
+	int background = 0xFFFFFF;
+
+	Window parent = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
 	
 	//Save set for if the window manager crashes, the reparented window survives
 	XAddToSaveSet(disp, window);
@@ -74,8 +78,10 @@ void reparentWindow(Window window){
 	//Displays parent window(frame)
 	XMapWindow(disp, parent);
 	//openClients[window] = parent;
-	
-	title = XCreateSimpleWindow(disp, parent, attr.x, attr.y, attr.width, 20, 0, 0xFFF000, 0x000FFF);
+
+	int titleColour = 0x000FFF;	
+
+	title = XCreateSimpleWindow(disp, parent, attr.x, attr.y, attr.width, 20, 0, 0xFFF000, titleColour);
 
 	XMapWindow(disp, title);
 
