@@ -1,10 +1,19 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <cstdlib>
+#include <cstring>
 #include <unordered_map>
 #include <string>
 #include <memory>
 #include <mutex>
+#include <algorithm>
+
+
+using ::std::max;
+using ::std::mutex;
+using ::std::string;
+using ::std::unique_ptr;
+
 
 //Max function for setting minimum window size
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -16,7 +25,7 @@ XEvent ev;				//event variable
 Window title;			//Titlebar variable
 
 
-//::std::unordered_map<Window, Window> clients_;
+::std::unordered_map<Window, Window> openClients;
 
 
 //EventMasks, only sends events of this type
@@ -77,7 +86,7 @@ void reparentWindow(Window window){
 	XReparentWindow(disp, window, parent, 0, 20);
 	//Displays parent window(frame)
 	XMapWindow(disp, parent);
-	//openClients[window] = parent;
+	openClients[window] = parent;
 
 	int titleColour = 0x000FFF;	
 
@@ -111,8 +120,7 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
 }
 
-void handleMotion(XMotionEvent ev)
-{
+void handleMotion(XMotionEvent ev) {
 	//If window moved, depending on button pressed, left click move = move, right click + move = resize using alt mod
 	if(start.subwindow != None){
         int xdiff = ev.x_root - start.x_root;
@@ -126,8 +134,7 @@ void handleMotion(XMotionEvent ev)
     }
 }
 
-void handleButton(XButtonEvent ev)
-{
+void handleButton(XButtonEvent ev) {
 	//Sets the start of the pointer for moving it
 	if(ev.subwindow != None){
             XGetWindowAttributes(disp, ev.subwindow, &attr);
@@ -137,8 +144,7 @@ void handleButton(XButtonEvent ev)
 }
 
 
-void handleKey(XKeyEvent ev)
-{
+void handleKey(XKeyEvent ev) {
 	//Event to raise focused window with Alt+F1
 	//TODO:Future will have to run by clicking window, when in focus
 
@@ -151,31 +157,52 @@ void handleKey(XKeyEvent ev)
 		system("xterm &");
 	}
 
-	//Alt + F4 closes window
-	//BUG: Xclock does not close fully close, just the inside, may be just window instead of subwindow
-	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_F4)){
-		XDestroySubwindows(disp, ev.subwindow);
+	//Alt + Escape closes window Manager
+	else if(ev.state == Mod1Mask && ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
+	        XCloseDisplay(disp);	
 	}
 
-	//Alt + Escape quits window manager
-	else if(ev.state == Mod1Mask && ev.subwindow != None && ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
-		XCloseDisplay(disp);
-	}
 
+        //Alt+F4 closes window
+	else if(ev.state == Mod1Mask && ev.keycode == XKeysymToKeycode(disp,XK_F4)){
+            XKillClient(disp, ev.window);
+            return;
+        }
+/*
+                Atom* supported_protocols;
+                int num_supported_protocols;
+                b
+                if(XGetWMProtocols(disp, ev.window,&supported_protocols,&num_supported_protocols) && (::std::find(supported_protocols,supported_protocols + num_supported_protocols,XInternAtom(disp, "WM_DELETE_WINDOW", false)) != supported_protocols + num_supported_protocols)) {
+                    XEvent msg;
+                    memset(&msg, 0, sizeof(msg));
+                    msg.xclient.type = ClientMessage;
+                    msg.xclient.message_type = XInternAtom(disp, "WM_PROTOCOLS", false);
+                    msg.xclient.window = ev.window;
+                    msg.xclient.format = 32;
+                    msg.xclient.data.l[0] = XInternAtom(disp, "WM_DELETE_WINDOW", false);
+
+                    XSendEvent(disp, ev.window, false, 0, &msg);
+                }
+                else {
+                    XKillClient(disp, ev.window);
+               }
+	}
+*/
+ 
  }
 
-/*
-void hadnleUnmapNotify(Window window) {
+
+void handleUnmapNotify(Window window) {
 
     const Window frame = openClients[window];
     XUnmapWindow(disp, frame);
-    XReParentWindow(disp, window, DefaultRootWindow(disp),0, 0);
+    XReparentWindow(disp, window, DefaultRootWindow(disp),0, 0);
     XRemoveFromSaveSet(disp, window);
     XDestroyWindow(disp, frame);
     openClients.erase(window);
 
 }
-*/
+
 //Event loop for intercepting different types of events
 void eventLoop()
 {
@@ -188,13 +215,12 @@ void eventLoop()
 		case MotionNotify: 		handleMotion(ev.xmotion);	break;
 		case MapRequest:		handleMapRequest(ev.xmaprequest); break;
 		case ConfigureRequest:	handleConfigRequest(ev.xconfigurerequest); break;
-//                case UnmapNotify:       handleUnmapNotify(ev.xunmap); break;
+                case UnmapNotify:       handleUnmapNotify(ev.xunmap.window); break;
 	}
 }
 
 
-int main(void)
-{
+int main(void) {
 
     if(!(disp = XOpenDisplay(0x0))) return 1; //fail if can't connect
 	setMasks();
