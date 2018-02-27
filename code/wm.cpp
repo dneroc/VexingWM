@@ -15,7 +15,7 @@ XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 
 
-::std::unordered_map<Window, Window> clients_;
+//::std::unordered_map<Window, Window> clients_;
 
 
 //EventMasks, only sends events of this type

@@ -3,7 +3,7 @@
 set -e
 
 
-gcc -std=c++11 -lX11 wm.cpp 
+gcc -std=c++1y -lX11 -Wall -g wm.cpp 
 
 
 XEPHYR=$(whereis -b Xephyr | cut -f2 -d' ')
