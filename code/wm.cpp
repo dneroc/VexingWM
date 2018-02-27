@@ -11,13 +11,6 @@
 
 using namespace std;
 
-
-using ::std::max;
-using ::std::mutex;
-using ::std::string;
-using ::std::unique_ptr;
-
-
 //Max function for setting minimum window size
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
