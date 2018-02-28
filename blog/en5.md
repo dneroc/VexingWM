@@ -1,4 +1,4 @@
-#Blog Number 5
+# Blog Number 5
 
 
 This week we switched from Python to C. Our reason for doing this is that the Xlib port for Python was very experimental and undocumented. It was very difficult to figure out how many of the mechanisms in X worked in python and sometimes the functionality in the Library had not yet been implimented in Python, making some features impossible. We experimented working in C and found we covered a lot of ground very fast which was due to the originial X libraries being written in C, and thus being easy to understand. 
