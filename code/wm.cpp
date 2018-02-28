@@ -21,6 +21,7 @@ XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
 Window frame; 			//Reparent variable
+Window client;			//For resizing the client
 Window parent;			//Parent for titlebar move
 Window test;			//Test window for closing
 
@@ -56,9 +57,9 @@ void setMasks(){
 	True, GrabModeAsync, GrabModeAsync);
 
 	//Alt + Right mouse click
-    XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
- 	GrabModeAsync, GrabModeAsync, None, None);
+    //XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), 
+	//True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+ 	//GrabModeAsync, GrabModeAsync, None, None);
 
 	//Events for reparenting 
 	XSelectInput(disp, DefaultRootWindow(disp),
@@ -76,7 +77,6 @@ void reparentWindow(Window window){
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
 	
-	//TODO: Fix title bar only working for one window (maybe reset which title bar it is?)
 	//TODO: add buttons to title bar
 	int borderWidth = 3;
 	int colour = 0xFFF000;
@@ -102,8 +102,12 @@ void reparentWindow(Window window){
 
 	//Click on the title bar event
 	XGrabButton(disp, 1, AnyModifier, title, 
-	False, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
+	
+	XGrabButton(disp, 3, Mod1Mask, frame, 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+ 	GrabModeAsync, GrabModeAsync, None, None);
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -118,7 +122,7 @@ void handleMapRequest(XMapRequestEvent ev){
 
 //Fixes xterm being tiny when reparented
 void handleConfigRequest(XConfigureRequestEvent ev){
-
+	cout << "Window configure start" << endl;
 	XWindowChanges ch;
 	ch.x = ev.x;
 	ch.y = ev.y;
@@ -145,21 +149,28 @@ void handleMotion(XMotionEvent ev) {
 	cout << "Ydiff: " << ydiff << endl;
 
 	//Move window by dragging title bar
-	if(start.window == title){
+	if(start.window == title && start.button != 3){
 		cout << "Start window move" << endl;
         XMoveWindow(disp, parent,
-        attr.x + (start.button==1 ? xdiff : 0),
-        attr.y + (start.button==1 ? ydiff : 0));
+        attr.x + xdiff,
+        attr.y + ydiff);
 		cout << "End window move" << xdiff << ydiff << endl;
 	}
 	
 	//Resize
+	//TODO:(bug) resizing fails when mouse moved outside of the window
 	if(start.subwindow != None){
+		cout << "Window resize start" << endl;
 		XResizeWindow(disp, ev.subwindow,
-        MAX(100, attr.width + (start.button==3 ? xdiff : 0)),
-        MAX(100, attr.height + (start.button==3 ? ydiff : 0)));
-		cout << "Window resized" << endl;
+        MAX(100, attr.width + xdiff),
+        MAX(100, attr.height + ydiff));
+		cout << "Window resize end" << endl;
 		
+		cout << "Window resize start" << endl;
+		XResizeWindow(disp, ev.window,
+        MAX(100, attr.width + xdiff),
+        MAX(100, attr.height + ydiff));
+		cout << "Window resize end" << endl;
     }
 }
 
@@ -167,13 +178,24 @@ void handleButton(XButtonEvent ev) {
 	cout << "Button press event" << endl;
 	
 	//Fixes titles not being reset, allows selection and movement
+	//TODO: Shoudld not reset for using button 3 since it resets the position if resize is changed to window instead and event mask to frame
 	title = ev.window;
 	
 	//Sets the start of the pointer for moving it
+	//TODO: Change from subwindow to window as this 
 	if(ev.subwindow != None){
 		cout << "Button 3 + Alt press start" << endl;
+
+		//Select the second child for title
+		/*
+		Window root, *child = NULL;
+		unsigned int nchild;
+		XQueryTree(disp, ev.window, &root, &parent, &child, &nchild);
+		*/
+
+
         XGetWindowAttributes(disp, ev.subwindow, &attr);
-		XRaiseWindow(disp, ev.subwindow);
+		XRaiseWindow(disp, ev.window);
 		start = ev;
 		cout << "Button 3 + Alt press end" << endl;
     }
@@ -294,10 +316,7 @@ void eventLoop()
 	}
 }
 
-
 //Useless calls
-
-
 int main(void) {
 
 	//fail if can't connect
