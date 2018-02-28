@@ -27,7 +27,6 @@ Window test;			//Test window for closing
 
 ::std::unordered_map<Window, Window> frames;
 
-
 //EventMasks, only sends events of this type
 void setMasks(){
 
@@ -105,6 +104,7 @@ void reparentWindow(Window window){
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 	
+	//Frame event
 	XGrabButton(disp, 3, Mod1Mask, frame, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
  	GrabModeAsync, GrabModeAsync, None, None);
@@ -160,17 +160,22 @@ void handleMotion(XMotionEvent ev) {
 	//Resize
 	//TODO:(bug) resizing fails when mouse moved outside of the window
 	if(start.subwindow != None){
-		cout << "Window resize start" << endl;
+		cout << "Frame resize start: " << ev.subwindow << endl;
 		XResizeWindow(disp, ev.subwindow,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
-		cout << "Window resize end" << endl;
+		cout << "Frame resize end" << endl;
 		
-		cout << "Window resize start" << endl;
+		cout << "Client resize start" << ev.window << endl;
 		XResizeWindow(disp, ev.window,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
-		cout << "Window resize end" << endl;
+		cout << "Client resize end" << endl;
+
+		cout << "Title resize start" << client << endl;
+		XResizeWindow(disp, client,
+        MAX(100, attr.width + xdiff), 20);
+		cout << "Title resize end" << endl;
     }
 }
 
@@ -179,27 +184,19 @@ void handleButton(XButtonEvent ev) {
 	
 	//Fixes titles not being reset, allows selection and movement
 	//TODO: Shoudld not reset for using button 3 since it resets the position if resize is changed to window instead and event mask to frame
+	//Fucks up resizing
+	client = title;
 	title = ev.window;
 	
 	//Sets the start of the pointer for moving it
 	//TODO: Change from subwindow to window as this 
 	if(ev.subwindow != None){
 		cout << "Button 3 + Alt press start" << endl;
-
-		//Select the second child for title
-		/*
-		Window root, *child = NULL;
-		unsigned int nchild;
-		XQueryTree(disp, ev.window, &root, &parent, &child, &nchild);
-		*/
-
-
         XGetWindowAttributes(disp, ev.subwindow, &attr);
 		XRaiseWindow(disp, ev.window);
 		start = ev;
 		cout << "Button 3 + Alt press end" << endl;
     }
-
 	//For pressing on the title bar
 	//Without ev.button != 3 it crashes as it assumes that button 1 is pressed
 	else if(ev.window == title && ev.button != 3){
@@ -211,10 +208,8 @@ void handleButton(XButtonEvent ev) {
 		XRaiseWindow(disp, parent);
 		start = ev;
 		cout << "Button 1 title press end" << endl;
-		title = ev.window;
-	}	
 
-	
+	}
 }
 
 void handleKey(XKeyEvent ev) {
