@@ -117,7 +117,6 @@ void handleMapRequest(XMapRequestEvent ev){
 }
 
 //Fixes xterm being tiny when reparented
-//TODO: Double check this comment: //Causes error when window is moved to fast
 void handleConfigRequest(XConfigureRequestEvent ev){
 
 	XWindowChanges ch;
@@ -137,7 +136,6 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 void handleMotion(XMotionEvent ev) {
 	cout << "Motion Event" << endl;
 	//TODO: Handle resizing to include the inner window
-	//TODO: Fix only one title bar being selected
 	int xdiff = ev.x_root - start.x_root;
 
 	cout << "Xdiff: " << xdiff << endl;
@@ -166,32 +164,35 @@ void handleMotion(XMotionEvent ev) {
 }
 
 void handleButton(XButtonEvent ev) {
-	//TODO:(bug) Resizing can cause a XConfigureWindow error and crash
 	cout << "Button press event" << endl;
 	
 	//Fixes titles not being reset, allows selection and movement
 	title = ev.window;
+	
+	//Sets the start of the pointer for moving it
+	if(ev.subwindow != None){
+		cout << "Button 3 + Alt press start" << endl;
+        XGetWindowAttributes(disp, ev.subwindow, &attr);
+		XRaiseWindow(disp, ev.subwindow);
+		start = ev;
+		cout << "Button 3 + Alt press end" << endl;
+    }
 
 	//For pressing on the title bar
-	if(ev.window == title){
-		
+	//Without ev.button != 3 it crashes as it assumes that button 1 is pressed
+	else if(ev.window == title && ev.button != 3){
+		cout << "Button 1 title press start" << endl;
 		Window root, *child = NULL;
 		unsigned int nchild;
 		XQueryTree(disp, ev.window, &root, &parent, &child, &nchild);
 		XGetWindowAttributes(disp, parent, &attr);
 		XRaiseWindow(disp, parent);
 		start = ev;
-		cout << "Button 1 title press" << endl;
+		cout << "Button 1 title press end" << endl;
 		title = ev.window;
 	}	
 
-	//Sets the start of the pointer for moving it
-	else if(ev.subwindow != None){
-        XGetWindowAttributes(disp, ev.subwindow, &attr);
-		XRaiseWindow(disp, ev.subwindow);
-		start = ev;
-		cout << "Button 3 + Alt press" << endl;
-    }
+	
 }
 
 void handleKey(XKeyEvent ev) {
@@ -235,7 +236,7 @@ void handleKey(XKeyEvent ev) {
 
 void handleUnmapNotify(Window window) {
 
-    Window frame = openClients[window];
+    Window frame = frames[window];
     XUnmapWindow(disp, frame);
     XReparentWindow(disp, window, DefaultRootWindow(disp), 0, 0);
     XRemoveFromSaveSet(disp, window);

@@ -4,3 +4,10 @@ Destroy window
 Error handling if another window manager exists
 Mouse pointer not showing, create one
 Tab switching
+Click focus to window with focus grab(Maybe change border colour to show this)
+Click anywhere to bring window to top
+Close without errors
+Resize correctly
+Have a look at the functional specifications for ideas etc.
+Title bar buttons
+Create tests
