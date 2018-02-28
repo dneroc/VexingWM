@@ -27,7 +27,7 @@ Window test;			//Test window for closing
 
 ::std::unordered_map<Window, Window> frames;
 
-//EventMasks, only sends events of this type
+//EventMasks, only sends events of this type on the root window(anywhere)
 void setMasks(){
 
 	//Alt + F1
@@ -55,11 +55,6 @@ void setMasks(){
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
 
-	//Alt + Right mouse click
-    //XGrabButton(disp, 3, Mod1Mask, DefaultRootWindow(disp), 
-	//True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
- 	//GrabModeAsync, GrabModeAsync, None, None);
-
 	//Events for reparenting 
 	XSelectInput(disp, DefaultRootWindow(disp),
 	SubstructureRedirectMask | SubstructureNotifyMask);
@@ -76,16 +71,16 @@ void reparentWindow(Window window){
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
 	
-	//TODO: add buttons to title bar
+	//TODO: add buttons to title bar, top left easiest
 	int borderWidth = 3;
 	int colour = 0xFFF000;
 	int background = 0xFFFFFF;
 	int titleColour = 0x000FFF;	
 
-	//Setting parent window charechtaristics, last 3: border width, colour and background
+	//Setting frame window charechtaristics
 	frame = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
 	
-	//Save set for if the window manager crashes, the reparented window survives
+	//Save set for if the window manager crashes
 	XAddToSaveSet(disp, window);
 
 	//Reparents child window
@@ -111,7 +106,8 @@ void reparentWindow(Window window){
 }
 
 void handleMapRequest(XMapRequestEvent ev){
-
+	
+	//Reparents window that sent map request
 	reparentWindow(ev.window);
 	cout << "Window reparented" << endl;
 
@@ -120,13 +116,12 @@ void handleMapRequest(XMapRequestEvent ev){
 	cout << "Frame mapped" << endl;
 }
 
-//Fixes xterm being tiny when reparented
+//Fixes xterm being tiny when reparented, allows client to set attribs
 void handleConfigRequest(XConfigureRequestEvent ev){
 	cout << "Window configure start" << endl;
 	XWindowChanges ch;
 	ch.x = ev.x;
 	ch.y = ev.y;
-	//Can set minimum width and height of new windows
 	ch.width = ev.width;
 	ch.height = ev.height;
 	ch.border_width = ev.border_width;
@@ -138,17 +133,16 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 }
 
 void handleMotion(XMotionEvent ev) {
-	cout << "Motion Event" << endl;
-	//TODO: Handle resizing to include the inner window
-	int xdiff = ev.x_root - start.x_root;
 
+	cout << "Motion Event" << endl;
+
+	int xdiff = ev.x_root - start.x_root;
 	cout << "Xdiff: " << xdiff << endl;
 
     int ydiff = ev.y_root - start.y_root;
-
 	cout << "Ydiff: " << ydiff << endl;
 
-	//Move window by dragging title bar
+	//Move window by dragging title bar with left mouse
 	if(start.window == title && start.button != 3){
 		cout << "Start window move" << endl;
         XMoveWindow(disp, parent,
@@ -157,23 +151,26 @@ void handleMotion(XMotionEvent ev) {
 		cout << "End window move" << xdiff << ydiff << endl;
 	}
 	
-	//Resize
+	//Resize windows with alt + right mouse button
+	//TODO: Set to resizing by grabbing the border, may be difficult as another window will need to be created to be used as the pull
 	//TODO:(bug) resizing fails when mouse moved outside of the window
 	if(start.subwindow != None){
-		cout << "Frame resize start: " << ev.subwindow << endl;
-		XResizeWindow(disp, ev.subwindow,
+		
+		
+		cout << "Frame resize start" << ev.window << endl;
+		XResizeWindow(disp, ev.window,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
 		cout << "Frame resize end" << endl;
-		
-		cout << "Client resize start" << ev.window << endl;
-		XResizeWindow(disp, ev.window,
+
+		cout << "Client resize start: " << ev.subwindow << endl;
+		XResizeWindow(disp, ev.subwindow,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
 		cout << "Client resize end" << endl;
 
-		cout << "Title resize start" << client << endl;
-		XResizeWindow(disp, client,
+		cout << "Title resize start" << title << endl;
+		XResizeWindow(disp, title,
         MAX(100, attr.width + xdiff), 20);
 		cout << "Title resize end" << endl;
     }
@@ -183,13 +180,14 @@ void handleButton(XButtonEvent ev) {
 	cout << "Button press event" << endl;
 	
 	//Fixes titles not being reset, allows selection and movement
-	//TODO: Shoudld not reset for using button 3 since it resets the position if resize is changed to window instead and event mask to frame
-	//Fucks up resizing
-	client = title;
-	title = ev.window;
+	//TODO:(bug) Resizing with title slight bug
+	//TODO:(bug) Resizing title only happens when clicked on with 1
+	//TODO:(bug) Crash when mouse outside of the window
+	if(ev.button != 3)
+		title = ev.window;
 	
+	//Button 3 
 	//Sets the start of the pointer for moving it
-	//TODO: Change from subwindow to window as this 
 	if(ev.subwindow != None){
 		cout << "Button 3 + Alt press start" << endl;
         XGetWindowAttributes(disp, ev.subwindow, &attr);
@@ -197,9 +195,11 @@ void handleButton(XButtonEvent ev) {
 		start = ev;
 		cout << "Button 3 + Alt press end" << endl;
     }
+
+	//Button 1
 	//For pressing on the title bar
 	//Without ev.button != 3 it crashes as it assumes that button 1 is pressed
-	else if(ev.window == title && ev.button != 3){
+	else if(ev.window != None && ev.button != 3){
 		cout << "Button 1 title press start" << endl;
 		Window root, *child = NULL;
 		unsigned int nchild;
