@@ -155,18 +155,21 @@ void handleMotion(XMotionEvent ev) {
 	if(start.subwindow != None){
 		
 		//cout << "Frame resize start" << ev.window << endl;
+		//Ev.window = frame
 		XResizeWindow(disp, ev.window,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
 		//cout << "Frame resize end" << endl;
 
 		//cout << "Client resize start: " << ev.subwindow << endl;
-		XResizeWindow(disp, ev.subwindow,
+		//Client = client
+		XResizeWindow(disp, client,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
 		//cout << "Client resize end" << endl;
 
 		//cout << "Title resize start" << title << endl;
+		//Title = title
 		XResizeWindow(disp, title,
         MAX(100, attr.width + xdiff), 20);
 		//cout << "Title resize end" << endl;
@@ -183,10 +186,11 @@ void handleButton(XButtonEvent ev) {
 	client = child[0];
 	resize = ev.window;
 	cout << "Alt + 3: " << ev.window << endl;
-	cout << "ALt + 3 subwindow: " << ev.subwindow << endl;
+	cout << "Frame: " << frame << endl;
+	//cout << "ALt + 3 subwindow: " << ev.subwindow << endl;
 	cout << "Client: " << client << endl;
-	cout << "Title: " << title << endl;
-
+	//cout << "Title: " << title << endl;
+	cout << "Button press event end" << endl;
 
 	//Left click + exit button, kills whole window
 	if(ev.window == exitButton && ev.button != 3){
@@ -210,12 +214,14 @@ void handleButton(XButtonEvent ev) {
 		cout << "Button 1 title press end" << endl;
 	}
 	
-	//TODO:(bug) Crashes as soon as pressed, check the if statement
+	//TODO:(bug) Resizing two frames, check the right variables in motion event
 	//Button 3 sets the start of the pointer for moving it
-	else if(ev.button == 3){
+	else{
 		cout << "Button 3 + Alt press start" << endl;
-		//queryTree(ev.window);
+		queryTree(ev.window);
 		//Get attributes of the frame, Alt+3 window = frame
+		client = child[0];
+		title = child[1];
         XGetWindowAttributes(disp, ev.window, &attr);
 		cout << "Get attr" << endl;
 		XRaiseWindow(disp, ev.window);
