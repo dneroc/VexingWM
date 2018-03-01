@@ -20,19 +20,21 @@ XWindowAttributes titleAttr; //titlebar attributes
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
+Window exitButton;		//Exit button at the top
 Window frame; 			//Reparent variable
 Window client;			//For resizing the client
-Window parent;			//Parent for titlebar move
+Window parent, *child;	//Parent and children of query tree
+unsigned int nchild;	//No. of children in query tree
 Window test;			//Test window for closing
-Window exitButton;		//Exit button at the top
+
 
 ::std::unordered_map<Window, Window> frames;
 
 //Gets the parent of a window, helpful for dealing with window frames
-void getParent(Window window){
-	cout << "Get frame start" << endl;
-	Window root, *child = NULL;
-	unsigned int nchild;
+void queryTree(Window window){
+	//cout << "Get frame start" << endl;
+	Window root;
+	child = NULL;
 	XQueryTree(disp, window, &root, &parent, &child, &nchild);
 }
 
@@ -106,15 +108,13 @@ void reparentWindow(Window window){
 	20, 20, 0, colour, exitColour);
 	XMapWindow(disp, exitButton);
 
-	client = window;
-
-	//Grab for exit button
-	XGrabButton(disp, 1, AnyModifier, exitButton, 
+	//Click on the title bar event (Button1)
+	XGrabButton(disp, 1, AnyModifier, title, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 
-	//Click on the title bar event (Button1)
-	XGrabButton(disp, 1, AnyModifier, title, 
+	//Grab for exit button
+	XGrabButton(disp, 1, AnyModifier, exitButton, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 	
@@ -135,16 +135,16 @@ void handleMotion(XMotionEvent ev) {
 
 	int xdiff = ev.x_root - start.x_root;
     int ydiff = ev.y_root - start.y_root;
-	cout << "Xdiff: " << xdiff << endl;
-	cout << "Ydiff: " << ydiff << endl;
+	//cout << "Xdiff: " << xdiff << endl;
+	//cout << "Ydiff: " << ydiff << endl;
 
 	//Move window by dragging title bar with left mouse
 	if(start.window == title && start.button != 3){
-		cout << "Start window move" << endl;
+		//cout << "Start window move" << endl;
         XMoveWindow(disp, parent,
         attr.x + xdiff,
         attr.y + ydiff);
-		cout << "End window move" << xdiff << ydiff << endl;
+		//cout << "End window move" << xdiff << ydiff << endl;
 	}
 	
 	//Resize windows with alt + right mouse button
@@ -153,49 +153,47 @@ void handleMotion(XMotionEvent ev) {
 	//TODO:(bug) bug when moved to title bar
 	if(start.subwindow != None){
 		
-		cout << "Frame resize start" << ev.window << endl;
+		//cout << "Frame resize start" << ev.window << endl;
 		XResizeWindow(disp, ev.window,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
-		cout << "Frame resize end" << endl;
+		//cout << "Frame resize end" << endl;
 
-		cout << "Client resize start: " << ev.subwindow << endl;
+		//cout << "Client resize start: " << ev.subwindow << endl;
 		XResizeWindow(disp, ev.subwindow,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
-		cout << "Client resize end" << endl;
+		//cout << "Client resize end" << endl;
 
-		cout << "Title resize start" << title << endl;
+		//cout << "Title resize start" << title << endl;
 		XResizeWindow(disp, title,
         MAX(100, attr.width + xdiff), 20);
-		cout << "Title resize end" << endl;
+		//cout << "Title resize end" << endl;
     }
 }
 
 void handleButton(XButtonEvent ev) {
 
 	cout << "Button press event" << endl;
-	//Fixes titles not being reset, allows selection and movement
-	if(ev.button != 3 && ev.window != exitButton){
-		title = ev.window;
-	}
+	queryTree(ev.window);
+	queryTree(parent);
+	title = child[1];
+	exitButton = child[2];
+	client = child[0];
 
-	//Exit button 
-	//TODO: Need to reset client
-	else if(ev.window == exitButton){
+	//Left click exit button kills whole window
+	if(ev.window == exitButton){
 		cout << "ExitButton start" << endl;
-		getParent(ev.window);
+		queryTree(ev.window);
 		XChangeSaveSet(disp, client, SetModeDelete);
         XKillClient(disp, client);
 		XDestroyWindow(disp, parent);
-		cout << "ExitButton end" << endl;;
+		start = ev;
+		cout << "ExitButton end" << endl;
 	}
-
 	
-	//TODO:(bug) Resizing with title slight bug
-	//TODO:(bug) Resizing title only happens when clicked on with 1
-	//Button 3 
-	//Sets the start of the pointer for moving it
+	//TODO:(bug) Crashes as soon as pressed, check the if statement
+	//Button 3 sets the start of the pointer for moving it
 	if(ev.subwindow != None && ev.button != 1){
 		cout << "Button 3 + Alt press start" << endl;
         XGetWindowAttributes(disp, ev.subwindow, &attr);
@@ -204,17 +202,14 @@ void handleButton(XButtonEvent ev) {
 		cout << "Button 3 + Alt press end" << endl;
     }
 	
-	//Button 1
-	//For pressing on the title bar
-	//Without ev.button != 3 it crashes as it assumes that button 1 is pressed
-	else if(ev.window == title && ev.button != 3 && ev.window != exitButton){
+	//Left click + title bar, raises window
+	if(ev.window == title){
 		cout << "Button 1 title press start" << endl;
-		getParent(ev.window);
+		queryTree(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
 		XRaiseWindow(disp, parent);
 		start = ev;
 		cout << "Button 1 title press end" << endl;
-
 	}
 }
 
@@ -242,7 +237,7 @@ void handleKey(XKeyEvent ev) {
     //Alt+F4 closes window
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
 			cout << "Kill window start" << endl;
-			getParent(ev.window);
+			queryTree(ev.window);
 			XChangeSaveSet(disp, ev.window, SetModeDelete);
 			cout << "Kill client" << endl;
             XKillClient(disp, ev.window);
@@ -255,7 +250,6 @@ void handleKey(XKeyEvent ev) {
 //Used for unmapping the frame if client minimised(unmapped), return to root and destroy coressponding frame
 void handleUnmapNotify(XUnmapEvent ev) {
 	cout << "Unmap start" << endl;
-
 }
 
 void handleMapRequest(XMapRequestEvent ev){
