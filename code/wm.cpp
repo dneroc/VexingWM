@@ -27,30 +27,34 @@ Window test;			//Test window for closing
 
 ::std::unordered_map<Window, Window> frames;
 
+//Gets the parent of a window, helpful for dealing with window frames
+void getParent(Window window){
+	cout << "Get frame start" << endl;
+	Window root, *child = NULL;
+	unsigned int nchild;
+	XQueryTree(disp, window, &root, &parent, &child, &nchild);
+}
+
 //EventMasks, only sends events of this type on the root window(anywhere)
 void setMasks(){
-
-	//Alt + F1
-    XGrabKey(disp, XKeysymToKeycode(disp, XK_F1), 
-	Mod1Mask, DefaultRootWindow(disp), 
-	True, GrabModeAsync, GrabModeAsync);
-
-	//Alt + F2
-	XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), 
-	Mod1Mask, DefaultRootWindow(disp), 
-	True, GrabModeAsync, GrabModeAsync);
-
-	//Alt + F4
-	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
-	Mod1Mask, DefaultRootWindow(disp), 
-	True, GrabModeAsync, GrabModeAsync);
 	
-	//Alt + Tab
+	//Alt + F1, nothing for now
+    //XGrabKey(disp, XKeysymToKeycode(disp, XK_F1), 
+	//Mod1Mask, DefaultRootWindow(disp), 
+	//True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + F2, nothing for now
+	//XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), 
+	//Mod1Mask, DefaultRootWindow(disp), 
+	//True, GrabModeAsync, GrabModeAsync);
+	
+	//Alt + Tab(for creating new windows)
+	//TODO: Set for window switching
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), 
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
 	
-	//Alt + Esc
+	//Alt + Esc(for escaping the client)
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), 
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
@@ -59,15 +63,16 @@ void setMasks(){
 	XSelectInput(disp, DefaultRootWindow(disp),
 	SubstructureRedirectMask | SubstructureNotifyMask);
 }
-
+//reset start for resizing, moving
 void handleButtRelease(XButtonReleasedEvent ev){
-	//reset start
 	cout << "Button release" << endl;
 	if(ev.type == ButtonRelease)
     	start.subwindow = None;
 }
 
+//Adds frame to each client
 void reparentWindow(Window window){
+
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
 	
@@ -89,20 +94,141 @@ void reparentWindow(Window window){
 	//Displays parent window(frame)
 	XMapWindow(disp, frame);
 	
-	//Title bar
+	//Create title bar
 	title = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
 	attr.width, 20, 0, 0xFFF000, titleColour);
 	XMapWindow(disp, title);
 
-	//Click on the title bar event
+	//Click on the title bar event (Button1)
 	XGrabButton(disp, 1, AnyModifier, title, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 	
-	//Frame event
+	//Frame event (Alt-Button3)
 	XGrabButton(disp, 3, Mod1Mask, frame, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
  	GrabModeAsync, GrabModeAsync, None, None);
+
+	//Alt + F4 event (for closing windows)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
+	Mod1Mask, window, 
+	True, GrabModeAsync, GrabModeAsync);
+}
+
+void handleMotion(XMotionEvent ev) {
+
+	cout << "Motion Event" << endl;
+
+	int xdiff = ev.x_root - start.x_root;
+    int ydiff = ev.y_root - start.y_root;
+	cout << "Xdiff: " << xdiff << endl;
+	cout << "Ydiff: " << ydiff << endl;
+
+	//Move window by dragging title bar with left mouse
+	if(start.window == title && start.button != 3){
+		cout << "Start window move" << endl;
+        XMoveWindow(disp, parent,
+        attr.x + xdiff,
+        attr.y + ydiff);
+		cout << "End window move" << xdiff << ydiff << endl;
+	}
+	
+	//Resize windows with alt + right mouse button
+	//TODO: Set to resizing by grabbing the border, may be difficult as another window will need to be created to be used as the pull
+	//TODO:(bug) resizing fails when mouse moved outside of the window
+	//TODO:(bug) bug when moved to title bar
+	if(start.subwindow != None){
+		
+		cout << "Frame resize start" << ev.window << endl;
+		XResizeWindow(disp, ev.window,
+        MAX(100, attr.width + xdiff),
+        MAX(100, attr.height + ydiff));
+		cout << "Frame resize end" << endl;
+
+		cout << "Client resize start: " << ev.subwindow << endl;
+		XResizeWindow(disp, ev.subwindow,
+        MAX(100, attr.width + xdiff),
+        MAX(100, attr.height + ydiff));
+		cout << "Client resize end" << endl;
+
+		cout << "Title resize start" << title << endl;
+		XResizeWindow(disp, title,
+        MAX(100, attr.width + xdiff), 20);
+		cout << "Title resize end" << endl;
+    }
+}
+
+void handleButton(XButtonEvent ev) {
+	cout << "Button press event" << endl;
+	
+	//Fixes titles not being reset, allows selection and movement
+	//TODO:(bug) Resizing with title slight bug
+	//TODO:(bug) Resizing title only happens when clicked on with 1
+	if(ev.button != 3)
+		title = ev.window;
+	
+	//Button 3 
+	//Sets the start of the pointer for moving it
+	if(ev.subwindow != None){
+		cout << "Button 3 + Alt press start" << endl;
+        XGetWindowAttributes(disp, ev.subwindow, &attr);
+		XRaiseWindow(disp, ev.window);
+		start = ev;
+		cout << "Button 3 + Alt press end" << endl;
+    }
+
+	//Button 1
+	//For pressing on the title bar
+	//Without ev.button != 3 it crashes as it assumes that button 1 is pressed
+	else if(ev.window != None && ev.button != 3){
+		cout << "Button 1 title press start" << endl;
+		getParent(ev.window);
+		XGetWindowAttributes(disp, parent, &attr);
+		XRaiseWindow(disp, parent);
+		start = ev;
+		cout << "Button 1 title press end" << endl;
+
+	}
+}
+
+//Will need if the program exits out itself
+/*void unframe(Window window){
+	cout << "Unframe start" << endl;
+	XUnmapWindow(disp, frame);
+	XReparentWindow(disp, window, DefaultRootWindow(disp), 0, 0);
+	XChangeSaveSet(disp, window, SetModeDelete);
+	XDestroyWindow(disp, frame);
+}*/
+
+
+void handleKey(XKeyEvent ev) {
+	//Alt + Tab creates new xclock
+	if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
+		system("xclock &");
+	}
+
+	//Alt + Escape closes window Manager
+	else if(ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
+	        XCloseDisplay(disp);	
+	}
+	
+    //Alt+F4 closes window
+	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
+			cout << "Kill window start" << endl;
+			getParent(ev.window);
+			XChangeSaveSet(disp, ev.window, SetModeDelete);
+			cout << "Kill client" << endl;
+            XKillClient(disp, ev.window);
+			cout << "Destroy frame: " << frame << endl;
+			XDestroyWindow(disp, parent);
+			cout << "Kill window end" << endl;
+    }
+}
+
+//Used for unmapping the frame if client minimised(unmapped), return to root and destroy coressponding frame
+void handleUnmapNotify(XUnmapEvent ev) {
+	cout << "Unmap start" << endl;
+
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -132,144 +258,6 @@ void handleConfigRequest(XConfigureRequestEvent ev){
 	cout << "Window configured. ID:" << ev.window << endl;
 }
 
-void handleMotion(XMotionEvent ev) {
-
-	cout << "Motion Event" << endl;
-
-	int xdiff = ev.x_root - start.x_root;
-	cout << "Xdiff: " << xdiff << endl;
-
-    int ydiff = ev.y_root - start.y_root;
-	cout << "Ydiff: " << ydiff << endl;
-
-	//Move window by dragging title bar with left mouse
-	if(start.window == title && start.button != 3){
-		cout << "Start window move" << endl;
-        XMoveWindow(disp, parent,
-        attr.x + xdiff,
-        attr.y + ydiff);
-		cout << "End window move" << xdiff << ydiff << endl;
-	}
-	
-	//Resize windows with alt + right mouse button
-	//TODO: Set to resizing by grabbing the border, may be difficult as another window will need to be created to be used as the pull
-	//TODO:(bug) resizing fails when mouse moved outside of the window
-	if(start.subwindow != None){
-		
-		
-		cout << "Frame resize start" << ev.window << endl;
-		XResizeWindow(disp, ev.window,
-        MAX(100, attr.width + xdiff),
-        MAX(100, attr.height + ydiff));
-		cout << "Frame resize end" << endl;
-
-		cout << "Client resize start: " << ev.subwindow << endl;
-		XResizeWindow(disp, ev.subwindow,
-        MAX(100, attr.width + xdiff),
-        MAX(100, attr.height + ydiff));
-		cout << "Client resize end" << endl;
-
-		cout << "Title resize start" << title << endl;
-		XResizeWindow(disp, title,
-        MAX(100, attr.width + xdiff), 20);
-		cout << "Title resize end" << endl;
-    }
-}
-
-void handleButton(XButtonEvent ev) {
-	cout << "Button press event" << endl;
-	
-	//Fixes titles not being reset, allows selection and movement
-	//TODO:(bug) Resizing with title slight bug
-	//TODO:(bug) Resizing title only happens when clicked on with 1
-	//TODO:(bug) Crash when mouse outside of the window
-	if(ev.button != 3)
-		title = ev.window;
-	
-	//Button 3 
-	//Sets the start of the pointer for moving it
-	if(ev.subwindow != None){
-		cout << "Button 3 + Alt press start" << endl;
-        XGetWindowAttributes(disp, ev.subwindow, &attr);
-		XRaiseWindow(disp, ev.window);
-		start = ev;
-		cout << "Button 3 + Alt press end" << endl;
-    }
-
-	//Button 1
-	//For pressing on the title bar
-	//Without ev.button != 3 it crashes as it assumes that button 1 is pressed
-	else if(ev.window != None && ev.button != 3){
-		cout << "Button 1 title press start" << endl;
-		Window root, *child = NULL;
-		unsigned int nchild;
-		XQueryTree(disp, ev.window, &root, &parent, &child, &nchild);
-		XGetWindowAttributes(disp, parent, &attr);
-		XRaiseWindow(disp, parent);
-		start = ev;
-		cout << "Button 1 title press end" << endl;
-
-	}
-}
-
-void handleKey(XKeyEvent ev) {
-	//Alt + Tab creates new xclock
-	if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-		system("xclock &");
-	}
-
-	//Alt + Escape closes window Manager
-	else if(ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
-	        XCloseDisplay(disp);	
-	}
-	
-    //Alt+F4 closes window
-	//TODO:(bug) KillClient kills the whole display
-	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
-            XKillClient(disp, ev.window);
-            //TODO: Check if this causes the crash: return;
-    }
-}
-/*
-                Atom* supported_protocols;
-                int num_supported_protocols;
-                b
-                if(XGetWMProtocols(disp, ev.window,&supported_protocols,&num_supported_protocols) && (::std::find(supported_protocols,supported_protocols + num_supported_protocols,XInternAtom(disp, "WM_DELETE_WINDOW", false)) != supported_protocols + num_supported_protocols)) {
-                    XEvent msg;
-                    memset(&msg, 0, sizeof(msg));
-                    msg.xclient.type = ClientMessage;
-                    msg.xclient.message_type = XInternAtom(disp, "WM_PROTOCOLS", false);
-                    msg.xclient.window = ev.window;
-                    msg.xclient.format = 32;
-                    msg.xclient.data.l[0] = XInternAtom(disp, "WM_DELETE_WINDOW", false);
-
-                    XSendEvent(disp, ev.window, false, 0, &msg);
-                }
-                else {
-                    XKillClient(disp, ev.window);
-               }
-	}
-*/
-
-void handleUnmapNotify(Window window) {
-
-    Window frame = frames[window];
-    XUnmapWindow(disp, frame);
-    XReparentWindow(disp, window, DefaultRootWindow(disp), 0, 0);
-    XRemoveFromSaveSet(disp, window);
-    XDestroyWindow(disp, frame);
-    frames.erase(window);
-
-}
-
-void handleCreateNotify(XCreateWindowEvent ev) {}
-
-void handleDestroyNotify(XDestroyWindowEvent ev) {}
-
-void handleReparentNotify(XReparentEvent ev) {}
-
-void handleMapNotify(XMapEvent ev) {}
-
 //Event loop for intercepting different types of events
 void eventLoop()
 {
@@ -294,32 +282,18 @@ void eventLoop()
 		case ConfigureRequest:	
 			handleConfigRequest(ev.xconfigurerequest); break;
 
-        case UnmapNotify:       
-			handleUnmapNotify(ev.xunmap.window); break;
+        case UnmapNotify:             
+			handleUnmapNotify(ev.xunmap); break;
 
-        case CreateNotify:      
-			handleCreateNotify(ev.xcreatewindow); break;
-
-        case DestroyNotify:             
-			handleDestroyNotify(ev.xdestroywindow); break;
-
-        case ReparentNotify:            
-			handleReparentNotify(ev.xreparent); break;
-
-        case MapNotify:                 
-			handleMapNotify(ev.xmap); break;
 	}
 }
 
-//Useless calls
 int main(void) {
 
-	//fail if can't connect
+	//fail if can't connect, another window manager running
     if(!(disp = XOpenDisplay(0x0))) return 1;
 	setMasks();
     start.subwindow = None;
-    test = XCreateSimpleWindow(disp, DefaultRootWindow(disp), 20, 20, 200, 200, 10, 0xFFFFFF, 0x696969);
-    XMapWindow(disp,test);	
     while(True){
 		//basic X event loop		
 		eventLoop();
