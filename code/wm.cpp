@@ -1,12 +1,5 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
-#include <cstdlib>
-#include <cstring>
-#include <unordered_map>
-#include <string>
-#include <memory>
-#include <mutex>
-#include <algorithm>
 #include <iostream>
 
 using namespace std;
@@ -29,9 +22,7 @@ unsigned int nchild;	//No. of children in query tree
 Window test;			//Test window for closing
 
 
-::std::unordered_map<Window, Window> frames;
-
-//Gets the parent of a window, helpful for dealing with window frames
+//Gets the children and parent of a window
 void queryTree(Window window){
 	cout << "Get frame start" << endl;
 	Window root;
@@ -39,7 +30,7 @@ void queryTree(Window window){
 	XQueryTree(disp, window, &root, &parent, &child, &nchild);
 }
 
-//EventMasks, only sends events of this type on the root window(anywhere)
+//EventMasks, only sends events of this type on the root window
 void setMasks(){
 	
 	//Alt + F1, nothing for now
@@ -52,9 +43,13 @@ void setMasks(){
 	//Mod1Mask, DefaultRootWindow(disp), 
 	//True, GrabModeAsync, GrabModeAsync);
 	
-	//Alt + Tab(for creating new windows)
-	//TODO: Set for window switching
+	//Alt + Tab for window switching
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), 
+	Mod1Mask, DefaultRootWindow(disp), 
+	True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + Enter(for creating new windows)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_Return), 
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
 	
@@ -79,8 +74,7 @@ void reparentWindow(Window window){
 	
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
-	
-	//TODO: add buttons to title bar, top left easiest
+
 	int borderWidth = 2;
 	int colour = 0xFFF000;
 	int background = 0xFFFFFF;
@@ -244,26 +238,32 @@ void handleButton(XButtonEvent ev) {
 
 
 void handleKey(XKeyEvent ev) {
-	//Alt + Tab creates new xclock
-	if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
+	//Alt + Enter calls a system call(currently xterm)
+	if(ev.keycode == XKeysymToKeycode(disp, XK_Return)){
 		system("xterm &");
 	}
 
 	//Alt + Escape closes window Manager
-	else if(ev.keycode == XKeysymToKeycode(disp,XK_Escape)){
-	        XCloseDisplay(disp);	
+	else if(ev.keycode == XKeysymToKeycode(disp, XK_Escape)){
+	    XCloseDisplay(disp);	
 	}
 	
     //Alt+F4 closes window
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
-			cout << "Kill window start" << endl;
-			queryTree(ev.window);
-			XChangeSaveSet(disp, ev.window, SetModeDelete);
-			cout << "Kill client" << endl;
-            XKillClient(disp, ev.window);
-			cout << "Destroy frame: " << frame << endl;
-			XDestroyWindow(disp, parent);
-			cout << "Kill window end" << endl;
+		cout << "Kill window start" << endl;
+		queryTree(ev.window);
+		XChangeSaveSet(disp, ev.window, SetModeDelete);
+		cout << "Kill client" << endl;
+        XKillClient(disp, ev.window);
+		cout << "Destroy frame: " << frame << endl;
+		XDestroyWindow(disp, parent);
+		cout << "Kill window end" << endl;
+    }
+
+	//Alt+Tab switch windows
+	else if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
+		queryTree(ev.window);
+		XRaiseWindow(disp, child[0]);	
     }
 }
 
