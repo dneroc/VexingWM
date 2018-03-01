@@ -21,6 +21,7 @@ XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
 Window exitButton;		//Exit button at the top
+Window resize;			//Variable for resizing
 Window frame; 			//Reparent variable
 Window client;			//For resizing the client
 Window parent, *child;	//Parent and children of query tree
@@ -32,7 +33,7 @@ Window test;			//Test window for closing
 
 //Gets the parent of a window, helpful for dealing with window frames
 void queryTree(Window window){
-	//cout << "Get frame start" << endl;
+	cout << "Get frame start" << endl;
 	Window root;
 	child = NULL;
 	XQueryTree(disp, window, &root, &parent, &child, &nchild);
@@ -80,7 +81,7 @@ void reparentWindow(Window window){
 	XGetWindowAttributes(disp, window, &attr);
 	
 	//TODO: add buttons to title bar, top left easiest
-	int borderWidth = 3;
+	int borderWidth = 2;
 	int colour = 0xFFF000;
 	int background = 0xFFFFFF;
 	int titleColour = 0x000FFF;
@@ -180,9 +181,15 @@ void handleButton(XButtonEvent ev) {
 	title = child[1];
 	exitButton = child[2];
 	client = child[0];
+	resize = ev.window;
+	cout << "Alt + 3: " << ev.window << endl;
+	cout << "ALt + 3 subwindow: " << ev.subwindow << endl;
+	cout << "Client: " << client << endl;
+	cout << "Title: " << title << endl;
 
-	//Left click exit button kills whole window
-	if(ev.window == exitButton){
+
+	//Left click + exit button, kills whole window
+	if(ev.window == exitButton && ev.button != 3){
 		cout << "ExitButton start" << endl;
 		queryTree(ev.window);
 		XChangeSaveSet(disp, client, SetModeDelete);
@@ -191,26 +198,33 @@ void handleButton(XButtonEvent ev) {
 		start = ev;
 		cout << "ExitButton end" << endl;
 	}
-	
-	//TODO:(bug) Crashes as soon as pressed, check the if statement
-	//Button 3 sets the start of the pointer for moving it
-	if(ev.subwindow != None && ev.button != 1){
-		cout << "Button 3 + Alt press start" << endl;
-        XGetWindowAttributes(disp, ev.subwindow, &attr);
-		XRaiseWindow(disp, ev.window);
-		start = ev;
-		cout << "Button 3 + Alt press end" << endl;
-    }
-	
-	//Left click + title bar, raises window
-	if(ev.window == title){
+
+	//Left click + title bar, raises window, move window
+	else if(ev.window == title && ev.button != 3){
 		cout << "Button 1 title press start" << endl;
 		queryTree(ev.window);
+		//Gets the attributes of the frame for moving
 		XGetWindowAttributes(disp, parent, &attr);
 		XRaiseWindow(disp, parent);
 		start = ev;
 		cout << "Button 1 title press end" << endl;
 	}
+	
+	//TODO:(bug) Crashes as soon as pressed, check the if statement
+	//Button 3 sets the start of the pointer for moving it
+	else if(ev.button == 3){
+		cout << "Button 3 + Alt press start" << endl;
+		//queryTree(ev.window);
+		//Get attributes of the frame, Alt+3 window = frame
+        XGetWindowAttributes(disp, ev.window, &attr);
+		cout << "Get attr" << endl;
+		XRaiseWindow(disp, ev.window);
+		cout << "Raise window" << endl;
+		start = ev;
+		cout << "Button 3 + Alt press end" << endl;
+    }
+	
+	
 }
 
 //Will need if the program exits out itself
@@ -226,7 +240,7 @@ void handleButton(XButtonEvent ev) {
 void handleKey(XKeyEvent ev) {
 	//Alt + Tab creates new xclock
 	if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-		system("xclock &");
+		system("xterm &");
 	}
 
 	//Alt + Escape closes window Manager
