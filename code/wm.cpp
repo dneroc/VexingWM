@@ -24,6 +24,7 @@ Window frame; 			//Reparent variable
 Window client;			//For resizing the client
 Window parent;			//Parent for titlebar move
 Window test;			//Test window for closing
+Window exitButton;		//Exit button at the top
 
 ::std::unordered_map<Window, Window> frames;
 
@@ -72,7 +73,7 @@ void handleButtRelease(XButtonReleasedEvent ev){
 
 //Adds frame to each client
 void reparentWindow(Window window){
-
+	
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
 	
@@ -80,7 +81,8 @@ void reparentWindow(Window window){
 	int borderWidth = 3;
 	int colour = 0xFFF000;
 	int background = 0xFFFFFF;
-	int titleColour = 0x000FFF;	
+	int titleColour = 0x000FFF;
+	int exitColour = 0xFF0000;
 
 	//Setting frame window charechtaristics
 	frame = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
@@ -96,8 +98,20 @@ void reparentWindow(Window window){
 	
 	//Create title bar
 	title = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
-	attr.width, 20, 0, 0xFFF000, titleColour);
+	attr.width, 20, 0, colour, titleColour);
 	XMapWindow(disp, title);
+
+	//Create exit button
+	exitButton = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
+	20, 20, 0, colour, exitColour);
+	XMapWindow(disp, exitButton);
+
+	client = window;
+
+	//Grab for exit button
+	XGrabButton(disp, 1, AnyModifier, exitButton, 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Click on the title bar event (Button1)
 	XGrabButton(disp, 1, AnyModifier, title, 
@@ -159,28 +173,41 @@ void handleMotion(XMotionEvent ev) {
 }
 
 void handleButton(XButtonEvent ev) {
+
 	cout << "Button press event" << endl;
-	
 	//Fixes titles not being reset, allows selection and movement
+	if(ev.button != 3 && ev.window != exitButton){
+		title = ev.window;
+	}
+
+	//Exit button 
+	//TODO: Need to reset client
+	else if(ev.window == exitButton){
+		cout << "ExitButton start" << endl;
+		getParent(ev.window);
+		XChangeSaveSet(disp, client, SetModeDelete);
+        XKillClient(disp, client);
+		XDestroyWindow(disp, parent);
+		cout << "ExitButton end" << endl;;
+	}
+
+	
 	//TODO:(bug) Resizing with title slight bug
 	//TODO:(bug) Resizing title only happens when clicked on with 1
-	if(ev.button != 3)
-		title = ev.window;
-	
 	//Button 3 
 	//Sets the start of the pointer for moving it
-	if(ev.subwindow != None){
+	if(ev.subwindow != None && ev.button != 1){
 		cout << "Button 3 + Alt press start" << endl;
         XGetWindowAttributes(disp, ev.subwindow, &attr);
 		XRaiseWindow(disp, ev.window);
 		start = ev;
 		cout << "Button 3 + Alt press end" << endl;
     }
-
+	
 	//Button 1
 	//For pressing on the title bar
 	//Without ev.button != 3 it crashes as it assumes that button 1 is pressed
-	else if(ev.window != None && ev.button != 3){
+	else if(ev.window == title && ev.button != 3 && ev.window != exitButton){
 		cout << "Button 1 title press start" << endl;
 		getParent(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
