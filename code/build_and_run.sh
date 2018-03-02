@@ -2,9 +2,7 @@
 
 set -e
 
-
 g++ -std=c++1y -Wall -g wm.cpp -lX11
-
 
 XEPHYR=$(whereis -b Xephyr | cut -f2 -d' ')
 xinit ./xinitrc -- \

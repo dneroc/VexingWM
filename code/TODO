@@ -1,12 +1,27 @@
-Add in a wallpaper when opened, check previous code
-Change focus to window pressed
-Destroy window
+==========================================
+TODO
+==========================================
+
+Add in a wallpaper when opened, check previous code(Maybe not the best idea as an outside program is needed, but maybe can be done with a window wallpaper with an image, I dunno?) https://stackoverflow.com/questions/6609281/how-to-draw-an-image-from-file-on-window-with-xlib
+
 Error handling if another window manager exists
-Tab switching
+
 Click focus to window with focus grab(Maybe change border colour to show this)
+
 Click anywhere to bring window to top
-Close without errors
+
 Have a look at the functional specifications for ideas etc.
-Title bar buttons
+
+Title bar buttons - minimise, fullscreen
+
 Create tests
+
 Check if all windows have been reframed
+
+=========================================
+BUGS
+=========================================
+
+Calling chromium-browser does not reparent properly, title bar parents in the middle of it. Maybe reparenting too early
+
+Gedit does not reparent properly either

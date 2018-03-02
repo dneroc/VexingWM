@@ -14,13 +14,32 @@ XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
 Window exitButton;		//Exit button at the top
-Window resize;			//Variable for resizing
-Window frame; 			//Reparent variable
 Window client;			//For resizing the client
 Window parent, *child;	//Parent and children of query tree
 unsigned int nchild;	//No. of children in query tree
-Window test;			//Test window for closing
 
+void createTitleMenu(){
+	int titleBorder = 0x7e7e7e;
+	int titleColour = 0xd3d3d3;
+	int buttonColour = 0x6666ff;
+	int buttonBorder = 0x242424;
+
+	//Title menu
+	XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
+	Window titleMenu = XCreateSimpleWindow(disp, 
+	DefaultRootWindow(disp), (attr.x - 3), (attr.height - 39), 
+	attr.width, 33, 3, titleBorder, titleColour);
+	XMapWindow(disp, titleMenu);
+
+	//TODO: Add text to window and make it launchable
+	//Xterm Launcher title menu button
+	//XGetWindowAttributes(disp, titleMenu, &attr);
+	Window xterm = XCreateSimpleWindow(disp, 
+	DefaultRootWindow(disp), attr.x, (attr.height - 36), 
+	(attr.width / 4), 27, 3, buttonBorder, buttonColour);
+
+	XMapWindow(disp, xterm);
+}
 
 //Gets the children and parent of a window
 void queryTree(Window window){
@@ -32,16 +51,6 @@ void queryTree(Window window){
 
 //EventMasks, only sends events of this type on the root window
 void setMasks(){
-	
-	//Alt + F1, nothing for now
-    //XGrabKey(disp, XKeysymToKeycode(disp, XK_F1), 
-	//Mod1Mask, DefaultRootWindow(disp), 
-	//True, GrabModeAsync, GrabModeAsync);
-
-	//Alt + F2, nothing for now
-	//XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), 
-	//Mod1Mask, DefaultRootWindow(disp), 
-	//True, GrabModeAsync, GrabModeAsync);
 	
 	//Alt + Tab for window switching
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), 
@@ -57,7 +66,7 @@ void setMasks(){
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), 
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
-
+	
 	//Events for reparenting 
 	XSelectInput(disp, DefaultRootWindow(disp),
 	SubstructureRedirectMask | SubstructureNotifyMask);
@@ -82,7 +91,7 @@ void reparentWindow(Window window){
 	int exitColour = 0xFF0000;
 
 	//Setting frame window charechtaristics
-	frame = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
+	Window frame = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
 	
 	//Save set for if the window manager crashes
 	XAddToSaveSet(disp, window);
@@ -112,7 +121,7 @@ void reparentWindow(Window window){
 	XGrabButton(disp, 1, AnyModifier, exitButton, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
-	
+
 	//Frame event (Alt-Button3)
 	XGrabButton(disp, 3, Mod1Mask, frame, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
@@ -144,26 +153,22 @@ void handleMotion(XMotionEvent ev) {
 	
 	//Resize windows with alt + right mouse button
 	//TODO: Set to resizing by grabbing the border, may be difficult as another window will need to be created to be used as the pull
-	//TODO:(bug) resizing fails when mouse moved outside of the window
-	//TODO:(bug) bug when moved to title bar
+	//TODO:(bug) When resizing the client window manages to appear a little below the frame
 	if(start.subwindow != None){
 		
 		//cout << "Frame resize start" << ev.window << endl;
-		//Ev.window = frame
 		XResizeWindow(disp, ev.window,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
 		//cout << "Frame resize end" << endl;
 
 		//cout << "Client resize start: " << ev.subwindow << endl;
-		//Client = client
 		XResizeWindow(disp, client,
         MAX(100, attr.width + xdiff),
         MAX(100, attr.height + ydiff));
 		//cout << "Client resize end" << endl;
 
 		//cout << "Title resize start" << title << endl;
-		//Title = title
 		XResizeWindow(disp, title,
         MAX(100, attr.width + xdiff), 20);
 		//cout << "Title resize end" << endl;
@@ -178,15 +183,8 @@ void handleButton(XButtonEvent ev) {
 	title = child[1];
 	exitButton = child[2];
 	client = child[0];
-	resize = ev.window;
-	cout << "Alt + 3: " << ev.window << endl;
-	cout << "Frame: " << frame << endl;
-	//cout << "ALt + 3 subwindow: " << ev.subwindow << endl;
-	cout << "Client: " << client << endl;
-	//cout << "Title: " << title << endl;
-	cout << "Button press event end" << endl;
 
-	//Left click + exit button, kills whole window
+	
 	if(ev.window == exitButton && ev.button != 3){
 		cout << "ExitButton start" << endl;
 		queryTree(ev.window);
@@ -208,7 +206,13 @@ void handleButton(XButtonEvent ev) {
 		cout << "Button 1 title press end" << endl;
 	}
 	
-	//TODO:(bug) Resizing two frames, check the right variables in motion event
+	//Left click to raise window
+	else if(ev.button != 3 && (ev.window != title || ev.window != exitButton)){
+		cout << "Raise window left click anywhere" << endl;
+		XRaiseWindow(disp, ev.window);
+		cout << "Raise window left click anywhere end" << endl;
+	}
+
 	//Button 3 sets the start of the pointer for moving it
 	else{
 		cout << "Button 3 + Alt press start" << endl;
@@ -255,12 +259,12 @@ void handleKey(XKeyEvent ev) {
 		XChangeSaveSet(disp, ev.window, SetModeDelete);
 		cout << "Kill client" << endl;
         XKillClient(disp, ev.window);
-		cout << "Destroy frame: " << frame << endl;
+		cout << "Destroy frame: " << parent << endl;
 		XDestroyWindow(disp, parent);
 		cout << "Kill window end" << endl;
     }
 
-	//Alt+Tab switch windows
+	//Alt+Tab switch windowsg
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
 		queryTree(ev.window);
 		XRaiseWindow(disp, child[0]);	
@@ -333,6 +337,7 @@ int main(void) {
 
 	//fail if can't connect, another window manager running
     if(!(disp = XOpenDisplay(0x0))) return 1;
+	createTitleMenu();
 	setMasks();
     start.subwindow = None;
     while(True){
