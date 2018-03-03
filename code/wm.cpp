@@ -1,12 +1,14 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <iostream>
-#include <vector>
+#include <unordered_map>
 
 using namespace std;
 
 //Max function for setting minimum window size
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+unordered_map<Window, Window> clients;
 
 Display * disp;			//main display
 XWindowAttributes attr;	//attributes of a window
@@ -110,23 +112,23 @@ void reparentWindow(Window window){
 	attr.width, 20, 0, colour, titleColour);
 
 	//Create exit button
-	exitButton = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
-	20, 20, 0, colour, exitColour);
-	
-	//Save set for if the window manager crashes
-	XAddToSaveSet(disp, window);
+	Window exitButton = XCreateSimpleWindow(disp, frame, attr.x,
+	attr.y, 20, 20, 0, colour, exitColour);
 
-	//Reparents child window
+	//Reparents client window
 	XReparentWindow(disp, window, frame, 0, 20);
 
 	//Displays parent window(frame)
 	XMapWindow(disp, frame);
 	
-	//Displays title
+	//Displays title (1st child of frame)
 	XMapWindow(disp, title);
 
-	//Displays exit button
+	//Displays exit button (2nd child of frame)
 	XMapWindow(disp, exitButton);
+	
+	//Mapping of window and frame for referencing later
+	clients[window] = frame; 
 
 	//Click on the title bar event (Button1)
 	XGrabButton(disp, 1, AnyModifier, title, 
@@ -161,9 +163,34 @@ void handleMapRequest(XMapRequestEvent ev){
 	reparentWindow(ev.window);
 	cout << "Window reparented" << endl;
 
-	//Remaps the child window
+	//Remaps the child window (3rd child of frame)
 	XMapWindow(disp, ev.window);
 	cout << "Client mapped" << endl;
+}
+
+//Used for unmapping the frame if client minimised(unmapped), return to root and destroy coressponding frame
+void handleUnmapNotify(XUnmapEvent ev) {
+	cout << "Unmap start" << endl;
+	
+	//Check to see if it is a client window, else we don't unmap frame
+	if(!clients.count(ev.window)){
+		cout << "Not a client window" << endl;
+		return;
+	}
+	
+	//Find the frame for this client window
+	Window unframe = clients[ev.window];
+
+	//Unmap it from the display
+	XUnmapWindow(disp, unframe);
+	
+	//Destroy the frame
+	XDestroyWindow(disp, unframe);
+
+	//Remove the mapping of window
+	clients.erase(ev.window);
+
+	cout << "Unmap window" << endl;
 }
 
 //reset start for resizing, moving
@@ -228,7 +255,6 @@ void handleButton(XButtonEvent ev) {
 	if(ev.window == exitButton && ev.button != 3){
 		cout << "ExitButton start" << endl;
 		queryTree(ev.window);
-		XChangeSaveSet(disp, client, SetModeDelete);
         XKillClient(disp, client);
 		XDestroyWindow(disp, parent);
 		start = ev;
@@ -271,16 +297,6 @@ void handleButton(XButtonEvent ev) {
 	
 }
 
-//Will need if the program exits out itself
-/*void unframe(Window window){
-	cout << "Unframe start" << endl;
-	XUnmapWindow(disp, frame);
-	XReparentWindow(disp, window, DefaultRootWindow(disp), 0, 0);
-	XChangeSaveSet(disp, window, SetModeDelete);
-	XDestroyWindow(disp, frame);
-}*/
-
-
 void handleKey(XKeyEvent ev) {
 	//Alt + Enter calls a system call(currently xterm)
 	if(ev.keycode == XKeysymToKeycode(disp, XK_Return)){
@@ -296,7 +312,6 @@ void handleKey(XKeyEvent ev) {
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
 		cout << "Kill window start" << endl;
 		queryTree(ev.window);
-		XChangeSaveSet(disp, ev.window, SetModeDelete);
 		cout << "Kill client" << endl;
         XKillClient(disp, ev.window);
 		cout << "Destroy frame: " << parent << endl;
@@ -311,12 +326,6 @@ void handleKey(XKeyEvent ev) {
     }
 }
 
-//Used for unmapping the frame if client minimised(unmapped), return to root and destroy coressponding frame
-void handleUnmapNotify(XUnmapEvent ev) {
-	cout << "Unmap start" << endl;
-
-	}
-
 //Event loop for intercepting different types of events
 void eventLoop()
 {
@@ -330,6 +339,9 @@ void eventLoop()
 		case MapRequest:		
 			handleMapRequest(ev.xmaprequest); break;
 
+		case UnmapNotify:             
+			handleUnmapNotify(ev.xunmap); break;
+
 		case KeyPress:
 			handleKey(ev.xkey);	break;
 
@@ -341,10 +353,6 @@ void eventLoop()
 
 		case MotionNotify: 		
 			handleMotion(ev.xmotion); break;
-
-        case UnmapNotify:             
-			handleUnmapNotify(ev.xunmap); break;
-
 	}
 }
 
