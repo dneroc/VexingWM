@@ -1,6 +1,7 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -18,7 +19,7 @@ Window client;			//For resizing the client
 Window parent, *child;	//Parent and children of query tree
 unsigned int nchild;	//No. of children in query tree
 
-void createTitleMenu(){
+/*void createTitleMenu(){
 	int titleBorder = 0x7e7e7e;
 	int titleColour = 0xd3d3d3;
 	int buttonColour = 0x6666ff;
@@ -31,19 +32,18 @@ void createTitleMenu(){
 	attr.width, 33, 3, titleBorder, titleColour);
 	XMapWindow(disp, titleMenu);
 
-	//TODO: Add text to window and make it launchable
+	//TODO: Add text to window and make it launchable, check alt tab bug first
 	//Xterm Launcher title menu button
 	//XGetWindowAttributes(disp, titleMenu, &attr);
 	Window xterm = XCreateSimpleWindow(disp, 
 	DefaultRootWindow(disp), attr.x, (attr.height - 36), 
 	(attr.width / 4), 27, 3, buttonBorder, buttonColour);
-
 	XMapWindow(disp, xterm);
-}
+}*/
 
 //Gets the children and parent of a window
 void queryTree(Window window){
-	cout << "Get frame start" << endl;
+	cout << "Query Tree" << endl;
 	Window root;
 	child = NULL;
 	XQueryTree(disp, window, &root, &parent, &child, &nchild);
@@ -67,31 +67,51 @@ void setMasks(){
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
 	
-	//Events for reparenting 
+	//Get requests from client, allows clients to resize
 	XSelectInput(disp, DefaultRootWindow(disp),
 	SubstructureRedirectMask | SubstructureNotifyMask);
 }
-//reset start for resizing, moving
-void handleButtRelease(XButtonReleasedEvent ev){
-	cout << "Button release" << endl;
-	if(ev.type == ButtonRelease)
-    	start.subwindow = None;
+
+//Fixes xterm being tiny when reparented, allows client to set attribs
+void handleConfigRequest(XConfigureRequestEvent ev){
+	cout << "Window configure start" << endl;
+	XWindowChanges ch;
+	ch.x = ev.x;
+	ch.y = ev.y;
+	ch.width = ev.width;
+	ch.height = ev.height;
+	ch.border_width = ev.border_width;
+	ch.sibling = ev.above;
+	ch.stack_mode = ev.detail;
+
+	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
+	cout << "Window configured. ID:" << ev.window << endl;
 }
 
 //Adds frame to each client
 void reparentWindow(Window window){
 	
-	//Attributes of origial window
-	XGetWindowAttributes(disp, window, &attr);
-
 	int borderWidth = 2;
 	int colour = 0xFFF000;
 	int background = 0xFFFFFF;
 	int titleColour = 0x000FFF;
 	int exitColour = 0xFF0000;
 
+	//Attributes of origial window
+	XGetWindowAttributes(disp, window, &attr);
+
 	//Setting frame window charechtaristics
-	Window frame = XCreateSimpleWindow(disp, DefaultRootWindow(disp), attr.x, attr.y, attr.width, attr.height + 20, borderWidth, colour, background);
+	Window frame = XCreateSimpleWindow(disp, 
+	DefaultRootWindow(disp), attr.x, attr.y, 
+	attr.width, attr.height + 20, borderWidth, colour, background);
+
+	//Create title bar
+	Window title = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
+	attr.width, 20, 0, colour, titleColour);
+
+	//Create exit button
+	exitButton = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
+	20, 20, 0, colour, exitColour);
 	
 	//Save set for if the window manager crashes
 	XAddToSaveSet(disp, window);
@@ -102,14 +122,10 @@ void reparentWindow(Window window){
 	//Displays parent window(frame)
 	XMapWindow(disp, frame);
 	
-	//Create title bar
-	title = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
-	attr.width, 20, 0, colour, titleColour);
+	//Displays title
 	XMapWindow(disp, title);
 
-	//Create exit button
-	exitButton = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
-	20, 20, 0, colour, exitColour);
+	//Displays exit button
 	XMapWindow(disp, exitButton);
 
 	//Click on the title bar event (Button1)
@@ -131,6 +147,30 @@ void reparentWindow(Window window){
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
 	Mod1Mask, window, 
 	True, GrabModeAsync, GrabModeAsync);
+	
+	//Get requests and change them, allows clients to resize
+	XSelectInput(disp, frame,
+	SubstructureRedirectMask | SubstructureNotifyMask);
+}
+
+void handleMapRequest(XMapRequestEvent ev){
+	
+	//TODO: Add client window to list/array	
+
+	//Reparents window that sent map request
+	reparentWindow(ev.window);
+	cout << "Window reparented" << endl;
+
+	//Remaps the child window
+	XMapWindow(disp, ev.window);
+	cout << "Client mapped" << endl;
+}
+
+//reset start for resizing, moving
+void handleButtRelease(XButtonReleasedEvent ev){
+	cout << "Button release" << endl;
+	if(ev.type == ButtonRelease)
+    	start.subwindow = None;
 }
 
 void handleMotion(XMotionEvent ev) {
@@ -180,9 +220,9 @@ void handleButton(XButtonEvent ev) {
 	cout << "Button press event" << endl;
 	queryTree(ev.window);
 	queryTree(parent);
-	title = child[1];
-	exitButton = child[2];
-	client = child[0];
+	title = child[0];
+	exitButton = child[1];
+	client = child[2];
 
 	
 	if(ev.window == exitButton && ev.button != 3){
@@ -218,8 +258,8 @@ void handleButton(XButtonEvent ev) {
 		cout << "Button 3 + Alt press start" << endl;
 		queryTree(ev.window);
 		//Get attributes of the frame, Alt+3 window = frame
-		client = child[0];
-		title = child[1];
+		client = child[2];
+		title = child[0];
         XGetWindowAttributes(disp, ev.window, &attr);
 		cout << "Get attr" << endl;
 		XRaiseWindow(disp, ev.window);
@@ -274,34 +314,8 @@ void handleKey(XKeyEvent ev) {
 //Used for unmapping the frame if client minimised(unmapped), return to root and destroy coressponding frame
 void handleUnmapNotify(XUnmapEvent ev) {
 	cout << "Unmap start" << endl;
-}
 
-void handleMapRequest(XMapRequestEvent ev){
-	
-	//Reparents window that sent map request
-	reparentWindow(ev.window);
-	cout << "Window reparented" << endl;
-
-	//Remaps the child window
-	XMapWindow(disp, ev.window);
-	cout << "Frame mapped" << endl;
-}
-
-//Fixes xterm being tiny when reparented, allows client to set attribs
-void handleConfigRequest(XConfigureRequestEvent ev){
-	cout << "Window configure start" << endl;
-	XWindowChanges ch;
-	ch.x = ev.x;
-	ch.y = ev.y;
-	ch.width = ev.width;
-	ch.height = ev.height;
-	ch.border_width = ev.border_width;
-	ch.sibling = ev.above;
-	ch.stack_mode = ev.detail;
-
-	XConfigureWindow(disp, ev.window, ev.value_mask, &ch);
-	cout << "Window configured. ID:" << ev.window << endl;
-}
+	}
 
 //Event loop for intercepting different types of events
 void eventLoop()
@@ -309,6 +323,13 @@ void eventLoop()
 	XNextEvent(disp, &ev);
 	
 	switch(ev.type){
+
+		case ConfigureRequest:	
+			handleConfigRequest(ev.xconfigurerequest); break;
+
+		case MapRequest:		
+			handleMapRequest(ev.xmaprequest); break;
+
 		case KeyPress:
 			handleKey(ev.xkey);	break;
 
@@ -321,12 +342,6 @@ void eventLoop()
 		case MotionNotify: 		
 			handleMotion(ev.xmotion); break;
 
-		case MapRequest:		
-			handleMapRequest(ev.xmaprequest); break;
-
-		case ConfigureRequest:	
-			handleConfigRequest(ev.xconfigurerequest); break;
-
         case UnmapNotify:             
 			handleUnmapNotify(ev.xunmap); break;
 
@@ -337,7 +352,7 @@ int main(void) {
 
 	//fail if can't connect, another window manager running
     if(!(disp = XOpenDisplay(0x0))) return 1;
-	createTitleMenu();
+	//createTitleMenu();
 	setMasks();
     start.subwindow = None;
     while(True){

@@ -18,6 +18,12 @@ Create tests
 
 Check if all windows have been reframed
 
+Clicking anywhere to raise window needs an event from frame and then a correct keypress procedure
+
+Focused window becomes highlighted
+
+Right click on display to bring up a menu
+
 =========================================
 BUGS
 =========================================
@@ -25,3 +31,6 @@ BUGS
 Calling chromium-browser does not reparent properly, title bar parents in the middle of it. Maybe reparenting too early
 
 Gedit does not reparent properly either
+
+Alt - tab for switching windows should not work for the title bar button, change what the xterm buttons parent is. 
+Actually all windows on the root display get switched, need to figure out a way to differenciate the windows and the menu, maybe set all other windows within another frame but possibly not

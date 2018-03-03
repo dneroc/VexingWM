@@ -2,6 +2,7 @@
 xclock &
 xterm &
 xeyes &
+#chromium-browser &
 
 # Start window manager
 ./a.out
