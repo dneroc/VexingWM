@@ -11,3 +11,5 @@ The biggest issue right now is considering the reparenting of windows. I believe
 The title bar is also causing some issues but I want to focus on the reparenting aspect and adding some more features/tests.
 
 Today I'm going to work on fixing the reparenting issue and hopefully adding more features.
+
+![] (https://media.giphy.com/media/3o7rbPDRHIHwbmcOBy/giphy.gif)
