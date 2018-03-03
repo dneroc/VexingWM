@@ -205,7 +205,7 @@ void reparentWindow(Window window){
 	attr.y, 20, 20, 0, exitColour, exitColour);
 
 	//Create maximise button
-	Window maxButton = XCreateSimpleWindow(disp, frame, attr.x + 21,
+	Window maxButton = XCreateSimpleWindow(disp, frame, attr.x + 20,
 	attr.y, 20, 20, 0, maxColour, maxColour);
 
 	//Reparents client window
@@ -326,12 +326,14 @@ void handleButton(XButtonEvent ev) {
 		resize(ev.window, attr.width - 4, attr.height - 4);
 	}*/
 
-	/*else if(ev.window == maxButton && ev.button != 3){
+	else if(ev.window == maxButton && ev.button != 3){
+		cout << "Max button" << endl;
 		queryTree(ev.window);
-		XGetWindowAttributes(disp, parent, &attr);
-		XMoveWindow(disp, ev.window, attr.x, attr.y);
-		resize(ev.window, attr.width - 4, attr.height - 4);
-	}*/
+		XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
+		XMoveWindow(disp, parent, attr.x, attr.y);
+		resize(parent, attr.width - 4, attr.height - 4);
+		XRaiseWindow(disp, parent);
+	}
 
 	//Left click + title bar, raises window, move window
 	else if(ev.window == title && ev.button != 3){
