@@ -8,7 +8,7 @@ using namespace std;
 //Max function for setting minimum window size
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-unordered_map<Window, Window> clients;
+unordered_map<Window, Window> clients; //Client/frame mapping
 
 Display * disp;			//main display
 XWindowAttributes attr;	//attributes of a window
@@ -21,6 +21,7 @@ Window client;			//For resizing the client
 Window parent, *child;	//Parent and children of query tree
 unsigned int nchild;	//No. of children in query tree
 
+//TODO: Finish implementing, alt tab problem to be fixed first
 /*void createTitleMenu(){
 	int titleBorder = 0x7e7e7e;
 	int titleColour = 0xd3d3d3;
@@ -43,6 +44,19 @@ unsigned int nchild;	//No. of children in query tree
 	XMapWindow(disp, xterm);
 }*/
 
+//Root borders for moving the window to a side of the screen to enlarge it there
+//TODO: Finish implementing, will require to seperate from root window as alt tab will not work. Should be easy if alt tab selects just the client frames from the undordered map.
+void createRootBorders(){
+
+	XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
+
+	Window leftBorder = XCreateSimpleWindow(disp, 
+	DefaultRootWindow(disp), attr.x, attr.y, 
+	10, attr.height, 0, 0xFFF000, 0xFFF000);
+
+	XMapWindow(disp, leftBorder);
+}
+
 //Gets the children and parent of a window
 void queryTree(Window window){
 
@@ -61,7 +75,7 @@ void setChildren(Window parent){
 	client = child[3];
 }
 
-//TODO:(bug) Resizes the wrong window once
+//TODO:(bug) Resizes assuming another window is the root
 void resize(Window window, int width, int height){
 	
 	setChildren(window);
@@ -79,8 +93,11 @@ void resize(Window window, int width, int height){
 	cout << "Title resize start" << title << endl;
 	XResizeWindow(disp, title, MAX(100, width), 20);
 	cout << "Title resize end" << endl;
+
+	XRaiseWindow(disp, window);
 }
 
+//Events called an all frames
 void setFrameMasks(Window window, Window frame, Window title, Window exitButton, Window maxButton){
 
 	//Click on the title bar event (Button1)
@@ -162,8 +179,9 @@ void setMasks(){
 	SubstructureRedirectMask | SubstructureNotifyMask);
 }
 
-//Fixes xterm being tiny when reparented, allows client to set attribs
+//Allows client to set attributes
 void handleConfigRequest(XConfigureRequestEvent ev){
+
 	cout << "Window configure start" << endl;
 	XWindowChanges ch;
 	ch.x = ev.x;
@@ -188,10 +206,10 @@ void reparentWindow(Window window){
 	int exitColour = 0xFF0000;
 	int maxColour = 0x00FF00;
 
-	//Attributes of origial window
+	//Attributes of original window
 	XGetWindowAttributes(disp, window, &attr);
 
-	//Setting frame window charechtaristics
+	//Setting frame window charachteristics
 	Window frame = XCreateSimpleWindow(disp, 
 	DefaultRootWindow(disp), attr.x, attr.y, 
 	attr.width, attr.height + 20, borderWidth, colour, background);
@@ -226,13 +244,12 @@ void reparentWindow(Window window){
 	//Mapping of window and frame for referencing later
 	clients[window] = frame; 
 
+	//Sets mask for frames
 	setFrameMasks(window, frame, title, exitButton, maxButton);
 }
 
 void handleMapRequest(XMapRequestEvent ev){
 	
-	//TODO: Add client window to list/array	
-
 	//Reparents window that sent map request
 	reparentWindow(ev.window);
 	cout << "Window reparented" << endl;
@@ -242,8 +259,9 @@ void handleMapRequest(XMapRequestEvent ev){
 	cout << "Client mapped" << endl;
 }
 
-//Used for unmapping the frame if client minimised(unmapped), return to root and destroy coressponding frame
+//Used for unmapping the frame if client minimised/destroyed, return to root and destroy coresponding frame
 void handleUnmapNotify(XUnmapEvent ev) {
+
 	cout << "Unmap start" << endl;
 	
 	//Check to see if it is a client window, else we don't unmap frame
@@ -269,6 +287,7 @@ void handleUnmapNotify(XUnmapEvent ev) {
 
 //reset start for resizing, moving
 void handleButtRelease(XButtonReleasedEvent ev){
+
 	cout << "Button release" << endl;
 	if(ev.type == ButtonRelease)
     	start.subwindow = None;
@@ -298,45 +317,42 @@ void handleMotion(XMotionEvent ev) {
 	else if(start.subwindow != None && start.subwindow != DefaultRootWindow(disp)){
 		
 		resize(ev.window, (attr.width + xdiff), (attr.height + ydiff));
-		
     }
 }
 
 void handleButton(XButtonEvent ev) {
 
 	cout << "Button press event" << endl;
+
+	//Needed for title press
 	if(ev.window != DefaultRootWindow(disp)){
+
 		queryTree(ev.window);
 		setChildren(parent);
 	}
 	
 	//Left click + red button closes window
 	if(ev.window == exitButton && ev.button != 3){
+
 		cout << "ExitButton start" << endl;
 		queryTree(ev.window);
         XKillClient(disp, client);
 		cout << "ExitButton end" << endl;
 	}
-/*
-	//Alt+Up fill screen
-	else if(ev.keycode == XKeysymToKeycode(disp, XK_Up)){
-		cout << "Alt + up arrow" << endl;
-		XGetWindowAttributes(disp, parent, &attr);
-		XMoveWindow(disp, ev.window, attr.x, attr.y);
-		resize(ev.window, attr.width - 4, attr.height - 4);
-	}*/
 
+	//Left click + green button maximises window
 	else if(ev.window == maxButton && ev.button != 3){
+
 		cout << "Max button" << endl;
 		queryTree(ev.window);
 		XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
 		XMoveWindow(disp, parent, attr.x, attr.y);
 		resize(parent, attr.width - 4, attr.height - 4);
-		XRaiseWindow(disp, parent);
 	}
 
-	//Left click + title bar, raises window, move window
+	//Left click + title bar, raise/move window
 	else if(ev.window == title && ev.button != 3){
+
 		cout << "Button 1 title press start" << endl;
 		queryTree(ev.window);
 		//Gets the attributes of the frame for moving
@@ -356,14 +372,15 @@ void handleButton(XButtonEvent ev) {
 
 	//Button 3 sets the start of the pointer for moving it
 	else if (ev.button == 3){
+
 		cout << "Button 3 + Alt press start" << endl;
-		//setChildren(ev.window);
         XGetWindowAttributes(disp, ev.window, &attr);
 		XRaiseWindow(disp, ev.window);
 		start = ev;
 		cout << "Button 3 + Alt press end" << endl;
     }
 
+	//TODO: for creating a submenu, not finished
 	/*else if(ev.subwindow == None && ev.button == 3){
 		cout << "Start submenu create" << endl;
 		XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
@@ -376,7 +393,9 @@ void handleButton(XButtonEvent ev) {
 	
 }
 
+//Handle all key presses
 void handleKey(XKeyEvent ev) {
+
 	//Alt + Enter calls a system call(currently xterm)
 	if(ev.keycode == XKeysymToKeycode(disp, XK_Return)){
 		system("xterm &");
@@ -384,11 +403,13 @@ void handleKey(XKeyEvent ev) {
 
 	//Alt + Escape closes window Manager
 	else if(ev.keycode == XKeysymToKeycode(disp, XK_Escape)){
+
 	    XCloseDisplay(disp);	
 	}
 	
     //Alt+F4 closes window
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
+
 		cout << "Kill window start" << endl;
         XKillClient(disp, ev.window);
 		cout << "Kill window end" << endl;
@@ -396,6 +417,7 @@ void handleKey(XKeyEvent ev) {
 
 	//Alt+Tab switch windows
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
+
 		cout << "Window switch start" << endl;
 		queryTree(ev.window);
 		XRaiseWindow(disp, child[0]);	
@@ -403,36 +425,37 @@ void handleKey(XKeyEvent ev) {
 
 	//Alt+Left move window to screen left
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Left)){
+
 		cout << "Alt + left arrow" << endl;
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, attr.x, attr.y);
 		resize(ev.window,(attr.width / 2), attr.height - 4);
-		XRaiseWindow(disp, ev.window);	
 	}
 
 	//Alt+Right move window to screen right
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Right)){
+
 		cout << "Alt + left arrow" << endl;
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, (attr.x + (attr.width / 2)), attr.y);
 		resize(ev.window,(attr.width / 2) - 4, attr.height - 4);
-		XRaiseWindow(disp, ev.window);
 	}
 
 	//Alt+Up fill screen
 	else if(ev.keycode == XKeysymToKeycode(disp, XK_Up)){
+
 		cout << "Alt + up arrow" << endl;
 		queryTree(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, attr.x, attr.y);
-		resize(ev.window, attr.width - 4, attr.height - 4);
-		XRaiseWindow(disp, ev.window);	
+		resize(ev.window, attr.width - 4, attr.height - 4);	
 	}
 }
 
 //Event loop for intercepting different types of events
 void eventLoop()
 {
+
 	XNextEvent(disp, &ev);
 	
 	switch(ev.type){
@@ -465,6 +488,7 @@ int main(void) {
 	//fail if can't connect, another window manager running
     if(!(disp = XOpenDisplay(0x0))) return 1;
 	//createTitleMenu();
+	//createRootBorders();
 	setMasks();
     start.subwindow = None;
     while(True){
