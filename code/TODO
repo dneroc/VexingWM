@@ -30,7 +30,9 @@ BUGS
 
 Calling chromium-browser does not reparent properly, title bar parents in the middle of it. Maybe reparenting too early
 
-Gedit does not reparent properly either
-
 Alt - tab for switching windows should not work for the title bar button, change what the xterm buttons parent is. 
 Actually all windows on the root display get switched, need to figure out a way to differenciate the windows and the menu, maybe set all other windows within another frame but possibly not
+
+If program is called with xterm, cannot type in xterm anymore
+
+Sometimes xeyes doesn't frame on start up

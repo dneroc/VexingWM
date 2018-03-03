@@ -12,7 +12,6 @@ unordered_map<Window, Window> clients;
 
 Display * disp;			//main display
 XWindowAttributes attr;	//attributes of a window
-XWindowAttributes titleAttr; //titlebar attributes
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
@@ -45,10 +44,85 @@ unsigned int nchild;	//No. of children in query tree
 
 //Gets the children and parent of a window
 void queryTree(Window window){
+
 	cout << "Query Tree" << endl;
 	Window root;
 	child = NULL;
 	XQueryTree(disp, window, &root, &parent, &child, &nchild);
+}
+
+//Sets title, exitButton, and client if parent is frame
+void setChildren(Window parent){
+	queryTree(parent);
+	title = child[0];
+	exitButton = child[1];
+	client = child[2];
+}
+
+void resize(Window window, int width, int height){
+	
+	setChildren(window);
+
+	cout << "Frame resize start" << window << endl;
+	XResizeWindow(disp, window,
+    MAX(100, width), MAX(100, height));
+	cout << "Frame resize end" << endl;
+
+	cout << "Client resize start: " << client << endl;
+	XResizeWindow(disp, client,
+    MAX(100, width), MAX(100, height));
+	cout << "Client resize end" << endl;
+
+	cout << "Title resize start" << title << endl;
+	XResizeWindow(disp, title, MAX(100, width), 20);
+	cout << "Title resize end" << endl;
+}
+
+void setFrameMasks(Window window, Window frame, Window title, Window exitButton){
+
+	//Click on the title bar event (Button1)
+	XGrabButton(disp, 1, AnyModifier, title, 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	GrabModeAsync, GrabModeAsync, None, None);
+
+	//Grab for exit button
+	XGrabButton(disp, 1, AnyModifier, exitButton, 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	GrabModeAsync, GrabModeAsync, None, None);
+
+	//Frame event (Alt-Button3)
+	XGrabButton(disp, 3, Mod1Mask, frame, 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+ 	GrabModeAsync, GrabModeAsync, None, None);
+
+	//Alt + F4 event (for closing windows)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
+	Mod1Mask, window, 
+	True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + F4 event (for closing windows)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
+	Mod1Mask, window, 
+	True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + left arrow (for move window to the left)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_Left), 
+	Mod1Mask, frame, 
+	True, GrabModeAsync, GrabModeAsync);
+	
+	//Alt + right arrow	(for move window to the right)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_Right), 
+	Mod1Mask, frame, 
+	True, GrabModeAsync, GrabModeAsync);
+
+	//Alt + up arrow (for window fill screen)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_Up), 
+	Mod1Mask, frame, 
+	True, GrabModeAsync, GrabModeAsync);
+	
+	//Get requests and change them, allows clients to resize
+	XSelectInput(disp, frame,
+	SubstructureRedirectMask | SubstructureNotifyMask);
 }
 
 //EventMasks, only sends events of this type on the root window
@@ -68,6 +142,12 @@ void setMasks(){
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), 
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
+
+	//TODO:(later) For creating a submenu on the root display
+	/*//Button 3 on root window for menu
+	XGrabButton(disp, 3, AnyModifier, DefaultRootWindow(disp), 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+ 	GrabModeAsync, GrabModeAsync, None, None);*/
 	
 	//Get requests from client, allows clients to resize
 	XSelectInput(disp, DefaultRootWindow(disp),
@@ -130,29 +210,7 @@ void reparentWindow(Window window){
 	//Mapping of window and frame for referencing later
 	clients[window] = frame; 
 
-	//Click on the title bar event (Button1)
-	XGrabButton(disp, 1, AnyModifier, title, 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
-	GrabModeAsync, GrabModeAsync, None, None);
-
-	//Grab for exit button
-	XGrabButton(disp, 1, AnyModifier, exitButton, 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
-	GrabModeAsync, GrabModeAsync, None, None);
-
-	//Frame event (Alt-Button3)
-	XGrabButton(disp, 3, Mod1Mask, frame, 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
- 	GrabModeAsync, GrabModeAsync, None, None);
-
-	//Alt + F4 event (for closing windows)
-	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
-	Mod1Mask, window, 
-	True, GrabModeAsync, GrabModeAsync);
-	
-	//Get requests and change them, allows clients to resize
-	XSelectInput(disp, frame,
-	SubstructureRedirectMask | SubstructureNotifyMask);
+	setFrameMasks(window, frame, title, exitButton);
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -221,36 +279,20 @@ void handleMotion(XMotionEvent ev) {
 	//Resize windows with alt + right mouse button
 	//TODO: Set to resizing by grabbing the border, may be difficult as another window will need to be created to be used as the pull
 	//TODO:(bug) When resizing the client window manages to appear a little below the frame
-	if(start.subwindow != None){
+	else if(start.subwindow != None && start.subwindow != DefaultRootWindow(disp)){
 		
-		//cout << "Frame resize start" << ev.window << endl;
-		XResizeWindow(disp, ev.window,
-        MAX(100, attr.width + xdiff),
-        MAX(100, attr.height + ydiff));
-		//cout << "Frame resize end" << endl;
-
-		//cout << "Client resize start: " << ev.subwindow << endl;
-		XResizeWindow(disp, client,
-        MAX(100, attr.width + xdiff),
-        MAX(100, attr.height + ydiff));
-		//cout << "Client resize end" << endl;
-
-		//cout << "Title resize start" << title << endl;
-		XResizeWindow(disp, title,
-        MAX(100, attr.width + xdiff), 20);
-		//cout << "Title resize end" << endl;
+		resize(ev.window, (attr.width + xdiff), (attr.height + ydiff));
+		
     }
 }
 
 void handleButton(XButtonEvent ev) {
 
 	cout << "Button press event" << endl;
-	queryTree(ev.window);
-	queryTree(parent);
-	title = child[0];
-	exitButton = child[1];
-	client = child[2];
-
+	if(ev.window != DefaultRootWindow(disp)){
+		queryTree(ev.window);
+		setChildren(parent);
+	}
 	
 	if(ev.window == exitButton && ev.button != 3){
 		cout << "ExitButton start" << endl;
@@ -271,27 +313,32 @@ void handleButton(XButtonEvent ev) {
 		cout << "Button 1 title press end" << endl;
 	}
 	
-	//Left click to raise window
+	/*//Left click to raise window
+	//TODO: Fix, doesn't work yet
 	else if(ev.button != 3 && (ev.window != title || ev.window != exitButton)){
 		cout << "Raise window left click anywhere" << endl;
 		XRaiseWindow(disp, ev.window);
 		cout << "Raise window left click anywhere end" << endl;
-	}
+	}*/
 
 	//Button 3 sets the start of the pointer for moving it
-	else{
+	else if (ev.button == 3){
 		cout << "Button 3 + Alt press start" << endl;
-		queryTree(ev.window);
-		//Get attributes of the frame, Alt+3 window = frame
-		client = child[2];
-		title = child[0];
+		//setChildren(ev.window);
         XGetWindowAttributes(disp, ev.window, &attr);
-		cout << "Get attr" << endl;
 		XRaiseWindow(disp, ev.window);
-		cout << "Raise window" << endl;
 		start = ev;
 		cout << "Button 3 + Alt press end" << endl;
     }
+
+	/*else if(ev.subwindow == None && ev.button == 3){
+		cout << "Start submenu create" << endl;
+		XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
+		Window menu = XCreateSimpleWindow(disp, 
+		DefaultRootWindow(disp), ev.x, ev.y, 
+		40, 80, 0, 0xFFF000, 0xFFF000);
+		XMapWindow(disp, menu);
+	}*/
 	
 	
 }
@@ -310,17 +357,43 @@ void handleKey(XKeyEvent ev) {
     //Alt+F4 closes window
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_F4)){
 		cout << "Kill window start" << endl;
-		queryTree(ev.window);
-		cout << "Kill client" << endl;
         XKillClient(disp, ev.window);
 		cout << "Kill window end" << endl;
     }
 
-	//Alt+Tab switch windowsg
+	//Alt+Tab switch windows
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
+		cout << "Window switch start" << endl;
 		queryTree(ev.window);
 		XRaiseWindow(disp, child[0]);	
     }
+
+	//Alt+Left move window to screen left
+	else if(ev.keycode == XKeysymToKeycode(disp,XK_Left)){
+		cout << "Alt + left arrow" << endl;
+		//setChildren(ev.window);
+		XGetWindowAttributes(disp, parent, &attr);
+		XMoveWindow(disp, ev.window, attr.x, attr.y);
+		resize(ev.window,(attr.width / 2), attr.height - 4);
+	}
+
+	//Alt+Right move window to screen right
+	else if(ev.keycode == XKeysymToKeycode(disp,XK_Right)){
+		cout << "Alt + left arrow" << endl;
+		//setChildren(ev.window);
+		XGetWindowAttributes(disp, parent, &attr);
+		XMoveWindow(disp, ev.window, (attr.x + (attr.width / 2)), attr.y);
+		resize(ev.window,(attr.width / 2) - 4, attr.height - 4);
+	}
+
+	//Alt+Up fill screen
+	else if(ev.keycode == XKeysymToKeycode(disp, XK_Up)){
+		cout << "Alt + left arrow" << endl;
+		//setChildren(ev.window);
+		XGetWindowAttributes(disp, parent, &attr);
+		XMoveWindow(disp, ev.window, attr.x, attr.y);
+		resize(ev.window, attr.width - 4, attr.height - 4);
+	}
 }
 
 //Event loop for intercepting different types of events
