@@ -183,7 +183,7 @@ void handleUnmapNotify(XUnmapEvent ev) {
 
 	//Unmap it from the display
 	XUnmapWindow(disp, unframe);
-	
+
 	//Destroy the frame
 	XDestroyWindow(disp, unframe);
 
@@ -256,7 +256,6 @@ void handleButton(XButtonEvent ev) {
 		cout << "ExitButton start" << endl;
 		queryTree(ev.window);
         XKillClient(disp, client);
-		XDestroyWindow(disp, parent);
 		start = ev;
 		cout << "ExitButton end" << endl;
 	}
@@ -314,8 +313,6 @@ void handleKey(XKeyEvent ev) {
 		queryTree(ev.window);
 		cout << "Kill client" << endl;
         XKillClient(disp, ev.window);
-		cout << "Destroy frame: " << parent << endl;
-		XDestroyWindow(disp, parent);
 		cout << "Kill window end" << endl;
     }
 
