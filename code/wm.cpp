@@ -15,7 +15,8 @@ XWindowAttributes attr;	//attributes of a window
 XButtonEvent start; 	//save pointers state at the beginning
 XEvent ev;				//event variable
 Window title;			//Titlebar variable
-Window exitButton;		//Exit button at the top
+Window exitButton;		//Exit button on the titlebar
+Window maxButton;		//Max button on the titlebar
 Window client;			//For resizing the client
 Window parent, *child;	//Parent and children of query tree
 unsigned int nchild;	//No. of children in query tree
@@ -56,9 +57,11 @@ void setChildren(Window parent){
 	queryTree(parent);
 	title = child[0];
 	exitButton = child[1];
-	client = child[2];
+	maxButton = child[2];
+	client = child[3];
 }
 
+//TODO:(bug) Resizes the wrong window once
 void resize(Window window, int width, int height){
 	
 	setChildren(window);
@@ -78,7 +81,7 @@ void resize(Window window, int width, int height){
 	cout << "Title resize end" << endl;
 }
 
-void setFrameMasks(Window window, Window frame, Window title, Window exitButton){
+void setFrameMasks(Window window, Window frame, Window title, Window exitButton, Window maxButton){
 
 	//Click on the title bar event (Button1)
 	XGrabButton(disp, 1, AnyModifier, title, 
@@ -87,6 +90,11 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton)
 
 	//Grab for exit button
 	XGrabButton(disp, 1, AnyModifier, exitButton, 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	GrabModeAsync, GrabModeAsync, None, None);
+
+	//Event for maximising button
+	XGrabButton(disp, 1, AnyModifier, maxButton, 
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 
@@ -178,6 +186,7 @@ void reparentWindow(Window window){
 	int background = 0xFFFFFF;
 	int titleColour = 0x000FFF;
 	int exitColour = 0xFF0000;
+	int maxColour = 0x00FF00;
 
 	//Attributes of origial window
 	XGetWindowAttributes(disp, window, &attr);
@@ -193,7 +202,11 @@ void reparentWindow(Window window){
 
 	//Create exit button
 	Window exitButton = XCreateSimpleWindow(disp, frame, attr.x,
-	attr.y, 20, 20, 0, colour, exitColour);
+	attr.y, 20, 20, 0, exitColour, exitColour);
+
+	//Create maximise button
+	Window maxButton = XCreateSimpleWindow(disp, frame, attr.x + 21,
+	attr.y, 20, 20, 0, maxColour, maxColour);
 
 	//Reparents client window
 	XReparentWindow(disp, window, frame, 0, 20);
@@ -207,10 +220,13 @@ void reparentWindow(Window window){
 	//Displays exit button (2nd child of frame)
 	XMapWindow(disp, exitButton);
 	
+	//Displays max button (3rd child of frame)
+	XMapWindow(disp, maxButton);
+	
 	//Mapping of window and frame for referencing later
 	clients[window] = frame; 
 
-	setFrameMasks(window, frame, title, exitButton);
+	setFrameMasks(window, frame, title, exitButton, maxButton);
 }
 
 void handleMapRequest(XMapRequestEvent ev){
@@ -294,13 +310,28 @@ void handleButton(XButtonEvent ev) {
 		setChildren(parent);
 	}
 	
+	//Left click + red button closes window
 	if(ev.window == exitButton && ev.button != 3){
 		cout << "ExitButton start" << endl;
 		queryTree(ev.window);
         XKillClient(disp, client);
-		start = ev;
 		cout << "ExitButton end" << endl;
 	}
+/*
+	//Alt+Up fill screen
+	else if(ev.keycode == XKeysymToKeycode(disp, XK_Up)){
+		cout << "Alt + up arrow" << endl;
+		XGetWindowAttributes(disp, parent, &attr);
+		XMoveWindow(disp, ev.window, attr.x, attr.y);
+		resize(ev.window, attr.width - 4, attr.height - 4);
+	}*/
+
+	/*else if(ev.window == maxButton && ev.button != 3){
+		queryTree(ev.window);
+		XGetWindowAttributes(disp, parent, &attr);
+		XMoveWindow(disp, ev.window, attr.x, attr.y);
+		resize(ev.window, attr.width - 4, attr.height - 4);
+	}*/
 
 	//Left click + title bar, raises window, move window
 	else if(ev.window == title && ev.button != 3){
@@ -371,28 +402,29 @@ void handleKey(XKeyEvent ev) {
 	//Alt+Left move window to screen left
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Left)){
 		cout << "Alt + left arrow" << endl;
-		//setChildren(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, attr.x, attr.y);
 		resize(ev.window,(attr.width / 2), attr.height - 4);
+		XRaiseWindow(disp, ev.window);	
 	}
 
 	//Alt+Right move window to screen right
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Right)){
 		cout << "Alt + left arrow" << endl;
-		//setChildren(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, (attr.x + (attr.width / 2)), attr.y);
 		resize(ev.window,(attr.width / 2) - 4, attr.height - 4);
+		XRaiseWindow(disp, ev.window);
 	}
 
 	//Alt+Up fill screen
 	else if(ev.keycode == XKeysymToKeycode(disp, XK_Up)){
-		cout << "Alt + left arrow" << endl;
-		//setChildren(ev.window);
+		cout << "Alt + up arrow" << endl;
+		queryTree(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, attr.x, attr.y);
 		resize(ev.window, attr.width - 4, attr.height - 4);
+		XRaiseWindow(disp, ev.window);	
 	}
 }
 

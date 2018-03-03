@@ -24,6 +24,8 @@ Focused window becomes highlighted
 
 Right click on display to bring up a menu
 
+Add minimisation
+
 =========================================
 BUGS
 =========================================
@@ -36,3 +38,5 @@ Actually all windows on the root display get switched, need to figure out a way 
 If program is called with xterm, cannot type in xterm anymore
 
 Sometimes xeyes doesn't frame on start up
+
+Using alt up left right does the wrong one 
