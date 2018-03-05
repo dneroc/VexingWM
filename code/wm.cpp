@@ -120,6 +120,11 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
  	GrabModeAsync, GrabModeAsync, None, None);
 
+	//Event for clicking client window
+	XGrabButton(disp, 1, AnyModifier, window, 
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	GrabModeAsync, GrabModeAsync, None, None);
+
 	//Alt + F4 event (for closing windows)
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
 	Mod1Mask, window, 
@@ -139,10 +144,8 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Up), 
 	Mod1Mask, frame, 
 	True, GrabModeAsync, GrabModeAsync);
+
 	
-	//Get requests and change them, allows clients to resize
-	XSelectInput(disp, frame,
-	SubstructureRedirectMask | SubstructureNotifyMask);
 }
 
 //EventMasks, only sends events of this type on the root window
@@ -162,6 +165,11 @@ void setMasks(){
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Escape), 
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
+
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_F8), 
+	Mod1Mask, DefaultRootWindow(disp), 
+	True, GrabModeAsync, GrabModeAsync);
+
 
 	//TODO:(later) For creating a submenu on the root display
 	/*//Button 3 on root window for menu
@@ -201,6 +209,7 @@ void reparentWindow(Window window){
 	int exitColour = 0xFF0000;
 	int maxColour = 0x00FF00;
 
+	cout << "Get reparent attribs" << endl;
 	//Attributes of original window
 	XGetWindowAttributes(disp, window, &attr);
 
@@ -209,6 +218,11 @@ void reparentWindow(Window window){
 	DefaultRootWindow(disp), attr.x, attr.y, 
 	attr.width, attr.height + 20, borderWidth, colour, background);
 
+	//Get requests and change them, allows clients to resize
+	XSelectInput(disp, frame,
+	SubstructureRedirectMask | SubstructureNotifyMask);
+
+	cout << "Create title bar and buttons" << endl;
 	//Create title bar
 	Window title = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
 	attr.width, 20, 0, colour, titleColour);
@@ -221,12 +235,15 @@ void reparentWindow(Window window){
 	Window maxButton = XCreateSimpleWindow(disp, frame, attr.x + 20,
 	attr.y, 20, 20, 0, maxColour, maxColour);
 
+	cout << "Reparent frame" << endl;
 	//Reparents client window
 	XReparentWindow(disp, window, frame, 0, 20);
 
+	cout << "Map frame" << endl;
 	//Displays parent window(frame)
 	XMapWindow(disp, frame);
 	
+	cout << "Map title and buttons" << endl;
 	//Displays title (1st child of frame)
 	XMapWindow(disp, title);
 
@@ -237,7 +254,7 @@ void reparentWindow(Window window){
 	XMapWindow(disp, maxButton);
 	
 	//Mapping of window and frame for referencing later
-	clients[window] = frame; 
+	clients[window] = frame;
 
 	//Sets mask for frames
 	setFrameMasks(window, frame, title, exitButton, maxButton);
@@ -325,6 +342,11 @@ void handleButton(XButtonEvent ev) {
 		queryTree(ev.window);
 		setChildren(parent);
 	}
+
+	/*if(ev.window == clients[window] && ev.button == 1){
+		queryTree(ev.window);
+		XRaiseWindow(disp, parent);
+	}*/
 	
 	//Left click + red button closes window
 	if(ev.window == exitButton && ev.button != 3){
@@ -391,9 +413,11 @@ void handleButton(XButtonEvent ev) {
 //Handle all key presses
 void handleKey(XKeyEvent ev) {
 
+
+
 	//Alt + Enter calls a system call(currently xterm)
 	if(ev.keycode == XKeysymToKeycode(disp, XK_Return)){
-		system("xterm &");
+		system("pacman &");
 	}
 
 	//Alt + Escape closes window Manager
