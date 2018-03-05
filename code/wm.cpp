@@ -336,18 +336,24 @@ void handleButton(XButtonEvent ev) {
 
 	cout << "Button press event" << endl;
 
+	cout << "Button press ID: " << ev.window << endl;
+	
 	//Needed for title press
 	if(ev.window != DefaultRootWindow(disp)){
 
 		queryTree(ev.window);
 		setChildren(parent);
+
+		//Click client to raise window and set focus
+		if(clients.count(ev.window)){
+			Window frame = clients[ev.window];
+			XRaiseWindow (disp, frame);
+			XSetInputFocus(disp, frame, RevertToNone, CurrentTime);
+			//XGrabPointer(disp, frame, true, )
+
+		}
 	}
 
-	/*if(ev.window == clients[window] && ev.button == 1){
-		queryTree(ev.window);
-		XRaiseWindow(disp, parent);
-	}*/
-	
 	//Left click + red button closes window
 	if(ev.window == exitButton && ev.button != 3){
 
@@ -365,6 +371,7 @@ void handleButton(XButtonEvent ev) {
 		XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
 		XMoveWindow(disp, parent, attr.x, attr.y);
 		resize(parent, attr.width - 4, attr.height - 4);
+		XSetInputFocus(disp, parent, RevertToPointerRoot, CurrentTime);
 	}
 
 	//Left click + title bar, raise/move window
@@ -376,16 +383,9 @@ void handleButton(XButtonEvent ev) {
 		XGetWindowAttributes(disp, parent, &attr);
 		XRaiseWindow(disp, parent);
 		start = ev;
+		XSetInputFocus(disp, parent, RevertToPointerRoot, CurrentTime);
 		cout << "Button 1 title press end" << endl;
 	}
-	
-	/*//Left click to raise window
-	//TODO: Fix, doesn't work yet
-	else if(ev.button != 3 && (ev.window != title || ev.window != exitButton)){
-		cout << "Raise window left click anywhere" << endl;
-		XRaiseWindow(disp, ev.window);
-		cout << "Raise window left click anywhere end" << endl;
-	}*/
 
 	//Button 3 sets the start of the pointer for moving it
 	else if (ev.button == 3){
@@ -394,6 +394,7 @@ void handleButton(XButtonEvent ev) {
         XGetWindowAttributes(disp, ev.window, &attr);
 		XRaiseWindow(disp, ev.window);
 		start = ev;
+		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
 		cout << "Button 3 + Alt press end" << endl;
     }
 
@@ -412,8 +413,6 @@ void handleButton(XButtonEvent ev) {
 
 //Handle all key presses
 void handleKey(XKeyEvent ev) {
-
-
 
 	//Alt + Enter calls a system call(currently xterm)
 	if(ev.keycode == XKeysymToKeycode(disp, XK_Return)){

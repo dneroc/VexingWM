@@ -4,8 +4,6 @@ TODO
 
 Add in a wallpaper when opened, check previous code(Maybe not the best idea as an outside program is needed, but maybe can be done with a window wallpaper with an image, I dunno?) https://stackoverflow.com/questions/6609281/how-to-draw-an-image-from-file-on-window-with-xlib
 
-Error handling if another window manager exists
-
 Click focus to window with focus grab(Maybe change border colour to show this)
 
 Click anywhere to bring window to top
@@ -24,7 +22,9 @@ Focused window becomes highlighted
 
 Right click on root display to bring up a menu
 
-Change DefaultRootWindow(disp) to just root 
+Revert maximised window to last known size
+
+Check owner_events to see if the event should be sent from the parent or not
 
 =========================================
 BUGS
