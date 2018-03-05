@@ -125,11 +125,6 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 	Mod1Mask, window, 
 	True, GrabModeAsync, GrabModeAsync);
 
-	//Alt + F4 event (for closing windows)
-	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
-	Mod1Mask, window, 
-	True, GrabModeAsync, GrabModeAsync);
-
 	//Alt + left arrow (for move window to the left)
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Left), 
 	Mod1Mask, frame, 
@@ -427,6 +422,7 @@ void handleKey(XKeyEvent ev) {
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Left)){
 
 		cout << "Alt + left arrow" << endl;
+		queryTree(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, attr.x, attr.y);
 		resize(ev.window,(attr.width / 2), attr.height - 4);
@@ -436,6 +432,7 @@ void handleKey(XKeyEvent ev) {
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Right)){
 
 		cout << "Alt + left arrow" << endl;
+		queryTree(ev.window);
 		XGetWindowAttributes(disp, parent, &attr);
 		XMoveWindow(disp, ev.window, (attr.x + (attr.width / 2)), attr.y);
 		resize(ev.window,(attr.width / 2) - 4, attr.height - 4);
