@@ -1,6 +1,6 @@
 # Start programs
 xclock &
-xterm &
+#xterm &
 xeyes &
 #chromium-browser &
 

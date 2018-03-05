@@ -112,7 +112,7 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 
 	//Event for maximising button
 	XGrabButton(disp, 1, AnyModifier, maxButton, 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	false, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Frame event (Alt-Button3)
@@ -122,7 +122,7 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 
 	//Event for clicking client window
 	XGrabButton(disp, 1, AnyModifier, window, 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	false, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Alt + F4 event (for closing windows)
@@ -345,12 +345,10 @@ void handleButton(XButtonEvent ev) {
 		setChildren(parent);
 
 		//Click client to raise window and set focus
-		if(clients.count(ev.window)){
+		if(ev.window != title){
 			Window frame = clients[ev.window];
 			XRaiseWindow (disp, frame);
 			XSetInputFocus(disp, frame, RevertToNone, CurrentTime);
-			//XGrabPointer(disp, frame, true, )
-
 		}
 	}
 
@@ -416,7 +414,7 @@ void handleKey(XKeyEvent ev) {
 
 	//Alt + Enter calls a system call(currently xterm)
 	if(ev.keycode == XKeysymToKeycode(disp, XK_Return)){
-		system("pacman &");
+		system("xterm &");
 	}
 
 	//Alt + Escape closes window Manager
@@ -507,6 +505,7 @@ int main(void) {
 
 	//fail if can't connect, another window manager running
     if(!(disp = XOpenDisplay(0x0))) return 1;
+	system("xsetroot -cursor_name top_left_arrow");
 	//createTitleMenu();
 	//createRootBorders();
 	setMasks();
