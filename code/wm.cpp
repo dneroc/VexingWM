@@ -344,6 +344,7 @@ void handleButton(XButtonEvent ev) {
 		cout << "Start ev" << endl;
 		start = ev;
 		cout << "Set input focus" << endl;
+		setChildren(ev.window);
 		XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
 		cout << "Button 3 + Alt press end" << endl;
     }
