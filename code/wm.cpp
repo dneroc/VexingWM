@@ -281,7 +281,6 @@ void handleMotion(XMotionEvent ev) {
 	}
 	
 	//Resize windows with alt + right mouse button
-	//TODO:(bug) When resizing the client window manages to appear a little below the frame
 	else if(start.subwindow != None && start.subwindow != DefaultRootWindow(disp)){
 		
 		resize(ev.window, (attr.width + xdiff), (attr.height + ydiff));
@@ -381,11 +380,22 @@ void handleKey(XKeyEvent ev) {
 
 	//Alt+Tab switch windows
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-		
-		if(ev.subwindow != None){
+
+		//Query root window
+		queryTree(ev.window);
+
+		//Check if root window has any children
+		if(nchild != 0){
+
 			cout << "Window switch start" << endl;
-			queryTree(ev.window);
+
+			//Child 0 is the next frame of the root window
 			XRaiseWindow(disp, child[0]);
+
+			//Sets the title, buttons, client
+			setChildren(child[0]);
+
+			XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
 		}	
     }
 
