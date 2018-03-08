@@ -76,6 +76,11 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 
 //EventMasks, only sends events of this type on the root window
 void setMasks(){
+
+	//Alt + F2 event (to open dmenu)
+	XGrabKey(disp, XKeysymToKeycode(disp, XK_F2), 
+	Mod1Mask, DefaultRootWindow(disp), 
+	True, GrabModeAsync, GrabModeAsync);
 	
 	//Alt + Tab for window switching
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_Tab), 
@@ -435,6 +440,13 @@ void handleKey(XKeyEvent ev) {
 		XMoveWindow(disp, ev.window, attr.x, attr.y);
 		resize(ev.window, attr.width - 4, attr.height - 4);	
 	}
+
+	//Alt+F2 bring up dmenu
+	else if(ev.keycode == XKeysymToKeycode(disp, XK_F2)){
+		system("dmenu_run &");
+	}
+
+	
 }
 
 //Event loop for intercepting different types of events
