@@ -381,10 +381,12 @@ void handleKey(XKeyEvent ev) {
 
 	//Alt+Tab switch windows
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
-
-		cout << "Window switch start" << endl;
-		queryTree(ev.window);
-		XRaiseWindow(disp, child[0]);	
+		
+		if(ev.subwindow != None){
+			cout << "Window switch start" << endl;
+			queryTree(ev.window);
+			XRaiseWindow(disp, child[0]);
+		}	
     }
 
 	//Alt+Left move window to screen left

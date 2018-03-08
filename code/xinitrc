@@ -1,7 +1,7 @@
 # Start programs
-xclock &
+#xclock &
 #xterm &
-xeyes &
+#xeyes &
 #chromium-browser &
 
 # Start window manager
