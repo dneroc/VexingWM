@@ -51,7 +51,7 @@ void resize(Window window, int width, int height){
 
 	cout << "Client resize start: " << client << endl;
 	XResizeWindow(disp, client,
-    MAX(100, width), MAX(100, height));
+    MAX(100, width), MAX(100, height - 10));
 	cout << "Client resize end" << endl;
 
 	cout << "Title resize start" << title << endl;
