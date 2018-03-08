@@ -350,10 +350,11 @@ void handleButton(XButtonEvent ev) {
 		cout << "Button 3 + Alt press end" << endl;
     }
 
+	//Button 1 to raise and focus clients
 	else if(ev.window != title && ev.button != 3){
 		Window frame = clients[ev.window];
 		XRaiseWindow (disp, frame);
-		XSetInputFocus(disp, frame, RevertToNone, CurrentTime);
+		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
 	}
 }
 
