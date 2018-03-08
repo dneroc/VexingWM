@@ -21,42 +21,6 @@ Window client;			//For resizing the client
 Window parent, *child;	//Parent and children of query tree
 unsigned int nchild;	//No. of children in query tree
 
-//TODO: Finish implementing, alt tab problem to be fixed first
-/*void createTitleMenu(){
-	int titleBorder = 0x7e7e7e;
-	int titleColour = 0xd3d3d3;
-	int buttonColour = 0x6666ff;
-	int buttonBorder = 0x242424;
-
-	//Title menu
-	XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
-	Window titleMenu = XCreateSimpleWindow(disp, 
-	DefaultRootWindow(disp), (attr.x - 3), (attr.height - 39), 
-	attr.width, 33, 3, titleBorder, titleColour);
-	XMapWindow(disp, titleMenu);
-
-	//TODO: Add text to window and make it launchable, check alt tab bug first
-	//Xterm Launcher title menu button
-	//XGetWindowAttributes(disp, titleMenu, &attr);
-	Window xterm = XCreateSimpleWindow(disp, 
-	DefaultRootWindow(disp), attr.x, (attr.height - 36), 
-	(attr.width / 4), 27, 3, buttonBorder, buttonColour);
-	XMapWindow(disp, xterm);
-}*/
-
-//Root borders for moving the window to a side of the screen to enlarge it there
-//TODO: Finish implementing, will require to seperate from root window as alt tab will not work. Should be easy if alt tab selects just the client frames from the undordered map.
-void createRootBorders(){
-
-	XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
-
-	Window leftBorder = XCreateSimpleWindow(disp, 
-	DefaultRootWindow(disp), attr.x, attr.y, 
-	10, attr.height, 0, 0xFFF000, 0xFFF000);
-
-	XMapWindow(disp, leftBorder);
-}
-
 //Gets the children and parent of a window
 void queryTree(Window window){
 
@@ -66,7 +30,7 @@ void queryTree(Window window){
 	XQueryTree(disp, window, &root, &parent, &child, &nchild);
 }
 
-//Sets title, exitButton, and client if parent is frame
+//Sets title, exitButton, maxButton, and client if parent is frame
 void setChildren(Window parent){
 	queryTree(parent);
 	title = child[0];
@@ -75,7 +39,7 @@ void setChildren(Window parent){
 	client = child[3];
 }
 
-//TODO:(bug) Resizes assuming another window is the root
+//Resize function that deal with 
 void resize(Window window, int width, int height){
 	
 	setChildren(window);
@@ -102,7 +66,8 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 
 	//Click on the title bar event (Button1)
 	XGrabButton(disp, 1, AnyModifier, title, 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	True, ButtonPressMask|ButtonReleaseMask|
+	PointerMotionMask|FocusChangeMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Grab for exit button
@@ -112,17 +77,19 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 
 	//Event for maximising button
 	XGrabButton(disp, 1, AnyModifier, maxButton, 
-	false, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Frame event (Alt-Button3)
 	XGrabButton(disp, 3, Mod1Mask, frame, 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	True, ButtonPressMask|ButtonReleaseMask|
+	PointerMotionMask|FocusChangeMask,
  	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Event for clicking client window
 	XGrabButton(disp, 1, AnyModifier, window, 
-	false, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+	True, ButtonPressMask|ButtonReleaseMask|
+	PointerMotionMask|FocusChangeMask,
 	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Alt + F4 event (for closing windows)
@@ -145,7 +112,6 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 	Mod1Mask, frame, 
 	True, GrabModeAsync, GrabModeAsync);
 
-	
 }
 
 //EventMasks, only sends events of this type on the root window
@@ -166,20 +132,11 @@ void setMasks(){
 	Mod1Mask, DefaultRootWindow(disp), 
 	True, GrabModeAsync, GrabModeAsync);
 
-	XGrabKey(disp, XKeysymToKeycode(disp, XK_F8), 
-	Mod1Mask, DefaultRootWindow(disp), 
-	True, GrabModeAsync, GrabModeAsync);
-
-
-	//TODO:(later) For creating a submenu on the root display
-	/*//Button 3 on root window for menu
-	XGrabButton(disp, 3, AnyModifier, DefaultRootWindow(disp), 
-	True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
- 	GrabModeAsync, GrabModeAsync, None, None);*/
-	
 	//Get requests from client, allows clients to resize
 	XSelectInput(disp, DefaultRootWindow(disp),
-	SubstructureRedirectMask | SubstructureNotifyMask);
+	SubstructureRedirectMask | SubstructureNotifyMask|FocusChangeMask);
+
+	
 }
 
 //Allows client to set attributes
@@ -220,7 +177,7 @@ void reparentWindow(Window window){
 
 	//Get requests and change them, allows clients to resize
 	XSelectInput(disp, frame,
-	SubstructureRedirectMask | SubstructureNotifyMask);
+	SubstructureRedirectMask | SubstructureNotifyMask | FocusChangeMask);
 
 	cout << "Create title bar and buttons" << endl;
 	//Create title bar
@@ -311,20 +268,19 @@ void handleMotion(XMotionEvent ev) {
 
 	int xdiff = ev.x_root - start.x_root;
     int ydiff = ev.y_root - start.y_root;
-	//cout << "Xdiff: " << xdiff << endl;
-	//cout << "Ydiff: " << ydiff << endl;
+	cout << "Xdiff: " << xdiff << endl;
+	cout << "Ydiff: " << ydiff << endl;
 
 	//Move window by dragging title bar with left mouse
 	if(start.window == title && start.button != 3){
-		//cout << "Start window move" << endl;
+		cout << "Start window move" << endl;
         XMoveWindow(disp, parent,
         attr.x + xdiff,
         attr.y + ydiff);
-		//cout << "End window move" << xdiff << ydiff << endl;
+		cout << "End window move" << xdiff << ydiff << endl;
 	}
 	
 	//Resize windows with alt + right mouse button
-	//TODO: Set to resizing by grabbing the border, may be difficult as another window will need to be created to be used as the pull
 	//TODO:(bug) When resizing the client window manages to appear a little below the frame
 	else if(start.subwindow != None && start.subwindow != DefaultRootWindow(disp)){
 		
@@ -345,7 +301,7 @@ void handleButton(XButtonEvent ev) {
 		setChildren(parent);
 
 		//Click client to raise window and set focus
-		if(ev.window != title){
+		if(ev.window != title && ev.button != 3){
 			Window frame = clients[ev.window];
 			XRaiseWindow (disp, frame);
 			XSetInputFocus(disp, frame, RevertToNone, CurrentTime);
@@ -390,23 +346,14 @@ void handleButton(XButtonEvent ev) {
 
 		cout << "Button 3 + Alt press start" << endl;
         XGetWindowAttributes(disp, ev.window, &attr);
+		cout << "Raise window" << endl;
 		XRaiseWindow(disp, ev.window);
+		cout << "Start ev" << endl;
 		start = ev;
+		cout << "Set input focus" << endl;
 		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
 		cout << "Button 3 + Alt press end" << endl;
     }
-
-	//TODO: for creating a submenu, not finished
-	/*else if(ev.subwindow == None && ev.button == 3){
-		cout << "Start submenu create" << endl;
-		XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
-		Window menu = XCreateSimpleWindow(disp, 
-		DefaultRootWindow(disp), ev.x, ev.y, 
-		40, 80, 0, 0xFFF000, 0xFFF000);
-		XMapWindow(disp, menu);
-	}*/
-	
-	
 }
 
 //Handle all key presses
@@ -470,6 +417,14 @@ void handleKey(XKeyEvent ev) {
 	}
 }
 
+void handleFocusIn(XFocusChangeEvent ev){
+	cout << "Focus in" << endl;
+}
+
+void handleFocusOut(XFocusChangeEvent ev){
+	cout << "Focus out" << endl; 
+}
+
 //Event loop for intercepting different types of events
 void eventLoop()
 {
@@ -498,6 +453,12 @@ void eventLoop()
 
 		case MotionNotify: 		
 			handleMotion(ev.xmotion); break;
+
+		case FocusIn:
+			handleFocusIn(ev.xfocus); break;
+
+		case FocusOut:
+			handleFocusOut(ev.xfocus); break;
 	}
 }
 
@@ -505,10 +466,13 @@ int main(void) {
 
 	//fail if can't connect, another window manager running
     if(!(disp = XOpenDisplay(0x0))) return 1;
+	
+	//Sets the arrow type
 	system("xsetroot -cursor_name top_left_arrow");
-	//createTitleMenu();
-	//createRootBorders();
+
 	setMasks();
+	
+	//Initialises start as None, used for getting the start location of a window for movement/resizing
     start.subwindow = None;
     while(True){
 		//basic X event loop		

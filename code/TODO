@@ -2,27 +2,17 @@
 TODO
 ==========================================
 
-Add in a wallpaper when opened, check previous code(Maybe not the best idea as an outside program is needed, but maybe can be done with a window wallpaper with an image, I dunno?) https://stackoverflow.com/questions/6609281/how-to-draw-an-image-from-file-on-window-with-xlib
-
-Click focus to window with focus grab(Maybe change border colour to show this)
-
-Click anywhere to bring window to top
-
 Have a look at the functional specifications for ideas etc.
 
 Title bar buttons - minimise
 
 Create tests
 
-Check if all windows have been reframed
-
-Clicking anywhere to raise window needs an event from frame and then a correct keypress procedure
+Keypress focus on a window
 
 Focused window becomes highlighted
 
 Right click on root display to bring up a menu
-
-Revert maximised window to last known size
 
 Check owner_events to see if the event should be sent from the parent or not
 
@@ -38,3 +28,11 @@ Actually all windows on the root display get switched, need to figure out a way 
 If program is called with xterm, cannot type in xterm anymore
 
 Sometimes xeyes doesn't frame on start up
+
+==========================================
+MAYBE
+==========================================
+
+Add in a wallpaper when opened, check previous code(Maybe not the best idea as an outside program is needed, but maybe can be done with a window wallpaper with an image, I dunno?) https://stackoverflow.com/questions/6609281/how-to-draw-an-image-from-file-on-window-with-xlib
+
+Revert maximised window to last known size
