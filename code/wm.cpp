@@ -21,46 +21,6 @@ Window client;			//For resizing the client
 Window parent, *child;	//Parent and children of query tree
 unsigned int nchild;	//No. of children in query tree
 
-//Gets the children and parent of a window
-void queryTree(Window window){
-
-	cout << "Query Tree" << endl;
-	Window root;
-	child = NULL;
-	XQueryTree(disp, window, &root, &parent, &child, &nchild);
-}
-
-//Sets title, exitButton, maxButton, and client if parent is frame
-void setChildren(Window parent){
-	queryTree(parent);
-	title = child[0];
-	exitButton = child[1];
-	maxButton = child[2];
-	client = child[3];
-}
-
-//Resize function that deal with 
-void resize(Window window, int width, int height){
-	
-	setChildren(window);
-
-	cout << "Frame resize start" << window << endl;
-	XResizeWindow(disp, window,
-    MAX(100, width), MAX(100, height));
-	cout << "Frame resize end" << endl;
-
-	cout << "Client resize start: " << client << endl;
-	XResizeWindow(disp, client,
-    MAX(100, width), MAX(100, height - 20));
-	cout << "Client resize end" << endl;
-
-	cout << "Title resize start" << title << endl;
-	XResizeWindow(disp, title, MAX(100, width), 20);
-	cout << "Title resize end" << endl;
-
-	XRaiseWindow(disp, window);
-}
-
 //Events called an all frames
 void setFrameMasks(Window window, Window frame, Window title, Window exitButton, Window maxButton){
 
@@ -135,8 +95,49 @@ void setMasks(){
 	//Get requests from client, allows clients to resize
 	XSelectInput(disp, DefaultRootWindow(disp),
 	SubstructureRedirectMask | SubstructureNotifyMask|FocusChangeMask);
-
 	
+}
+
+//Gets the children and parent of a window
+void queryTree(Window window){
+
+	cout << "Query Tree" << endl;
+	Window root;
+	child = NULL;
+	XQueryTree(disp, window, &root, &parent, &child, &nchild);
+}
+
+//Sets title, exitButton, maxButton, and client if parent is frame
+void setChildren(Window parent){
+	
+	cout << "Set children" << endl;
+	queryTree(parent);
+	title = child[0];
+	exitButton = child[1];
+	maxButton = child[2];
+	client = child[3];
+}
+
+//Resize function that deal with sizing of frame, client, and title
+void resize(Window window, int width, int height){
+	
+	setChildren(window);
+
+	cout << "Frame resize start" << window << endl;
+	XResizeWindow(disp, window,
+    MAX(100, width), MAX(100, height));
+	cout << "Frame resize end" << endl;
+
+	cout << "Client resize start: " << client << endl;
+	XResizeWindow(disp, client,
+    MAX(100, width), MAX(100, height - 20));
+	cout << "Client resize end" << endl;
+
+	cout << "Title resize start" << title << endl;
+	XResizeWindow(disp, title, MAX(100, width), 20);
+	cout << "Title resize end" << endl;
+
+	XRaiseWindow(disp, window);
 }
 
 //Allows client to set attributes
@@ -167,6 +168,7 @@ void reparentWindow(Window window){
 	int maxColour = 0x00FF00;
 
 	cout << "Get reparent attribs" << endl;
+
 	//Attributes of original window
 	XGetWindowAttributes(disp, window, &attr);
 
@@ -180,6 +182,7 @@ void reparentWindow(Window window){
 	SubstructureRedirectMask | SubstructureNotifyMask | FocusChangeMask);
 
 	cout << "Create title bar and buttons" << endl;
+
 	//Create title bar
 	Window title = XCreateSimpleWindow(disp, frame, attr.x, attr.y,
 	attr.width, 20, 0, colour, titleColour);
@@ -193,14 +196,17 @@ void reparentWindow(Window window){
 	attr.y, 20, 20, 0, maxColour, maxColour);
 
 	cout << "Reparent frame" << endl;
+
 	//Reparents client window
 	XReparentWindow(disp, window, frame, 0, 20);
 
 	cout << "Map frame" << endl;
+
 	//Displays parent window(frame)
 	XMapWindow(disp, frame);
 	
 	cout << "Map title and buttons" << endl;
+
 	//Displays title (1st child of frame)
 	XMapWindow(disp, title);
 
@@ -235,6 +241,7 @@ void handleUnmapNotify(XUnmapEvent ev) {
 	
 	//Check to see if it is a client window, else we don't unmap frame
 	if(!clients.count(ev.window)){
+
 		cout << "Not a client window" << endl;
 		return;
 	}
@@ -251,7 +258,7 @@ void handleUnmapNotify(XUnmapEvent ev) {
 	//Remove the mapping of window
 	clients.erase(ev.window);
 
-	cout << "Unmap window" << endl;
+	cout << "Unmap end" << endl;
 }
 
 //reset start for resizing, moving
@@ -273,10 +280,9 @@ void handleMotion(XMotionEvent ev) {
 
 	//Move window by dragging title bar with left mouse
 	if(start.window == title && start.button != 3){
+
 		cout << "Start window move" << endl;
-        XMoveWindow(disp, parent,
-        attr.x + xdiff,
-        attr.y + ydiff);
+        XMoveWindow(disp, parent, attr.x + xdiff, attr.y + ydiff);
 		cout << "End window move" << xdiff << ydiff << endl;
 	}
 	
@@ -290,7 +296,6 @@ void handleMotion(XMotionEvent ev) {
 void handleButton(XButtonEvent ev) {
 
 	cout << "Button press event" << endl;
-
 	cout << "Button press ID: " << ev.window << endl;
 	
 	//Needed for title press
@@ -343,14 +348,15 @@ void handleButton(XButtonEvent ev) {
 		XRaiseWindow(disp, ev.window);
 		cout << "Start ev" << endl;
 		start = ev;
-		cout << "Set input focus" << endl;
 		setChildren(ev.window);
+		cout << "Set input focus" << endl;
 		XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
 		cout << "Button 3 + Alt press end" << endl;
     }
 
 	//Button 1 to raise and focus clients
 	else if(ev.window != title && ev.button != 3){
+
 		Window frame = clients[ev.window];
 		XRaiseWindow (disp, frame);
 		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
@@ -431,14 +437,6 @@ void handleKey(XKeyEvent ev) {
 	}
 }
 
-void handleFocusIn(XFocusChangeEvent ev){
-	cout << "Focus in" << endl;
-}
-
-void handleFocusOut(XFocusChangeEvent ev){
-	cout << "Focus out" << endl; 
-}
-
 //Event loop for intercepting different types of events
 void eventLoop()
 {
@@ -468,11 +466,6 @@ void eventLoop()
 		case MotionNotify: 		
 			handleMotion(ev.xmotion); break;
 
-		case FocusIn:
-			handleFocusIn(ev.xfocus); break;
-
-		case FocusOut:
-			handleFocusOut(ev.xfocus); break;
 	}
 }
 
@@ -488,7 +481,9 @@ int main(void) {
 	
 	//Initialises start as None, used for getting the start location of a window for movement/resizing
     start.subwindow = None;
+
     while(True){
+
 		//basic X event loop		
 		eventLoop();
     }
