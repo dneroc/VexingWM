@@ -301,11 +301,6 @@ void handleButton(XButtonEvent ev) {
 		setChildren(parent);
 
 		//Click client to raise window and set focus
-		if(ev.window != title && ev.button != 3){
-			Window frame = clients[ev.window];
-			XRaiseWindow (disp, frame);
-			XSetInputFocus(disp, frame, RevertToNone, CurrentTime);
-		}
 	}
 
 	//Left click + red button closes window
@@ -354,6 +349,12 @@ void handleButton(XButtonEvent ev) {
 		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
 		cout << "Button 3 + Alt press end" << endl;
     }
+
+	else if(ev.window != title && ev.button != 3){
+		Window frame = clients[ev.window];
+		XRaiseWindow (disp, frame);
+		XSetInputFocus(disp, frame, RevertToNone, CurrentTime);
+	}
 }
 
 //Handle all key presses
