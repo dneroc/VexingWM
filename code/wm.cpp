@@ -300,7 +300,6 @@ void handleButton(XButtonEvent ev) {
 		queryTree(ev.window);
 		setChildren(parent);
 
-		//Click client to raise window and set focus
 	}
 
 	//Left click + red button closes window
@@ -320,7 +319,7 @@ void handleButton(XButtonEvent ev) {
 		XGetWindowAttributes(disp, DefaultRootWindow(disp), &attr);
 		XMoveWindow(disp, parent, attr.x, attr.y);
 		resize(parent, attr.width - 4, attr.height - 4);
-		XSetInputFocus(disp, parent, RevertToPointerRoot, CurrentTime);
+		XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
 	}
 
 	//Left click + title bar, raise/move window
@@ -332,7 +331,7 @@ void handleButton(XButtonEvent ev) {
 		XGetWindowAttributes(disp, parent, &attr);
 		XRaiseWindow(disp, parent);
 		start = ev;
-		XSetInputFocus(disp, parent, RevertToPointerRoot, CurrentTime);
+		XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
 		cout << "Button 1 title press end" << endl;
 	}
 
@@ -346,7 +345,7 @@ void handleButton(XButtonEvent ev) {
 		cout << "Start ev" << endl;
 		start = ev;
 		cout << "Set input focus" << endl;
-		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
+		XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
 		cout << "Button 3 + Alt press end" << endl;
     }
 
