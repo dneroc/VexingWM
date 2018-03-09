@@ -1,8 +1,8 @@
 # Start programs
-#xclock &
-#xterm &
-#xeyes &
-#chromium-browser &
+xclock &
+xterm &
+xeyes &
+firefox &
 
 # Start window manager
 ./a.out
