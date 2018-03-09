@@ -1,8 +1,6 @@
 # Start programs
 xclock &
 xterm &
-sleep 2
-xeyes &
 
 # Start window manager
 ./a.out

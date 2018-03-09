@@ -177,6 +177,9 @@ void reparentWindow(Window window){
 	//Attributes of original window
 	XGetWindowAttributes(disp, window, &attr);
 
+	if(attr.override_redirect)
+		return;
+
 	//Setting frame window charachteristics
 	Window frame = XCreateSimpleWindow(disp, 
 	DefaultRootWindow(disp), attr.x, attr.y, 
@@ -231,6 +234,7 @@ void reparentWindow(Window window){
 void handleMapRequest(XMapRequestEvent ev){
 	
 	//Reparents window that sent map request
+
 	reparentWindow(ev.window);
 	cout << "Window reparented" << endl;
 
@@ -308,6 +312,7 @@ void handleButton(XButtonEvent ev) {
 
 		queryTree(ev.window);
 		setChildren(parent);
+		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
 
 	}
 
@@ -394,20 +399,19 @@ void handleKey(XKeyEvent ev) {
 	else if(ev.keycode == XKeysymToKeycode(disp,XK_Tab)){
 
 		//Query root window
-		queryTree(ev.window);
-
+		queryTree(DefaultRootWindow(disp));
+		cout << "No of child windows: " << nchild << endl;
 		//Check if root window has any children
 		if(nchild != 0){
-
 			cout << "Window switch start" << endl;
-
 			//Child 0 is the next frame of the root window
 			XRaiseWindow(disp, child[0]);
-
+			cout << "Set children" << endl;
 			//Sets the title, buttons, client
-			setChildren(child[0]);
-
-			XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
+			//setChildren(child[0]);
+			cout << "Set focus" << endl;
+			//XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
+			cout << "End tab switch" << endl;
 		}	
     }
 
@@ -445,8 +449,6 @@ void handleKey(XKeyEvent ev) {
 	else if(ev.keycode == XKeysymToKeycode(disp, XK_F2)){
 		system("dmenu_run &");
 	}
-
-	
 }
 
 //Event loop for intercepting different types of events
