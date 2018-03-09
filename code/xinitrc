@@ -1,8 +1,9 @@
 # Start programs
 xclock &
 xterm &
-xeyes &
 firefox &
+sleep 2
+xeyes &
 
 # Start window manager
 ./a.out
