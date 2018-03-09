@@ -158,6 +158,7 @@ any frame that is associated with a client window.
 ## 5. Installation
 
 **Dependencies**
+
 C++-11 enabled C++ compiler
 X Library (Xlib) headings and libraries
 Xterm terminal
@@ -168,6 +169,7 @@ For Ubuntu/Debian type in to terminal: sudo apt-get install build-essential libx
 For Arch Linux type in to the terminal: yaourt -S base-devel libx11 xorg-server-xephyr xterm
 
 **Running the window manager**
+
 Go to the code folder of the window manager
 Open terminal in this folder and enter the following into the terminal: g++ -std=c++1y -Wall -g wm.cpp -lX11
 
@@ -180,6 +182,7 @@ following and save: exec /path/to/the/code/folder/a.out
 Launch the window manager by entering the following into the terminal: startx
 
 **Opening the testing environment**
+
 If you would like to launch the X Window Manager in a new window without having to install
 it you can do that by going to the code folder and running the ./build_and_run.sh script.
 
