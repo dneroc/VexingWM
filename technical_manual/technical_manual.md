@@ -154,3 +154,34 @@ In the early stages of closing windows, the client itself would close but it wou
 frame behind. There were several ideas that were proposed but the one we went with was
 using an unordered map to map each frame to a client window. This allowed us to destroy
 any frame that is associated with a client window.
+
+## 5. Installation
+
+**Dependencies**
+C++-11 enabled C++ compiler
+X Library (Xlib) headings and libraries
+Xterm terminal
+Xinit
+
+For Ubuntu/Debian type in to terminal: sudo apt-get install build-essential libx11-dev xserver-xephyr xinit xterm
+
+For Arch Linux type in to the terminal: yaourt -S base-devel libx11 xorg-server-xephyr xterm
+
+**Running the window manager**
+Go to the code folder of the window manager
+Open terminal in this folder and enter the following into the terminal: g++ -std=c++1y -Wall -g wm.cpp -lX11
+
+Go to your home folder and open your xinitrc file using the terminal with your prefered
+file editor: gedit .xinitrc
+
+Ensure to comment out any other window manager. At the bottom of the file enter the
+following and save: exec /path/to/the/code/folder/a.out
+
+Launch the window manager by entering the following into the terminal: startx
+
+**Opening the testing environment**
+If you would like to launch the X Window Manager in a new window without having to install
+it you can do that by going to the code folder and running the ./build_and_run.sh script.
+
+The xinitrc file allows you to select which programs will launch when you first the testing
+environment.
