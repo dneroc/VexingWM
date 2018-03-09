@@ -1,7 +1,6 @@
 # Start programs
 xclock &
 xterm &
-firefox &
 sleep 2
 xeyes &
 
