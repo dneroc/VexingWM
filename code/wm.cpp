@@ -46,11 +46,11 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 	PointerMotionMask|FocusChangeMask,
  	GrabModeAsync, GrabModeAsync, None, None);
 
-	//Event for clicking client window
+/*	//Event for clicking client window
 	XGrabButton(disp, 1, AnyModifier, window, 
 	True, ButtonPressMask|ButtonReleaseMask|
 	PointerMotionMask|FocusChangeMask,
-	GrabModeAsync, GrabModeAsync, None, None);
+	GrabModeAsync, GrabModeAsync, None, None);*/
 
 	//Alt + F4 event (for closing windows)
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
@@ -312,7 +312,7 @@ void handleButton(XButtonEvent ev) {
 
 		queryTree(ev.window);
 		setChildren(parent);
-		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
+		//XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
 
 	}
 
@@ -366,10 +366,11 @@ void handleButton(XButtonEvent ev) {
 
 	//Button 1 to raise and focus clients
 	else if(ev.window != title && ev.button != 3){
-
+		cout << "Client focus" << endl;
 		Window frame = clients[ev.window];
 		XRaiseWindow (disp, frame);
 		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
+		XFlush(disp);
 	}
 }
 
@@ -487,7 +488,6 @@ int main(void) {
 
 	//fail if can't connect, another window manager running
     if(!(disp = XOpenDisplay(0x0))) return 1;
-	
 	//Sets the arrow type
 	system("xsetroot -cursor_name top_left_arrow");
 
