@@ -16,24 +16,21 @@ xdotool click 1
 output=$(xdotool getmouselocation)
 rootWindow=$(echo $output | awk '{print $4}' | cut -d":" -f2)
 
-echo "RootWindow: $rootWindow"
-
 #Open terminal
 xdotool key alt+Return
-sleep 0.5
+sleep 0.2
 
 #Get terminal number
 xdotool mousemove 100 10
 output=$(xdotool getmouselocation)
 terminal=$(echo $output | awk '{print $4}' | cut -d":" -f2)
-echo "Terminal: $terminal"
 
 #Test1: Check if terminal is open
 if [ "$rootWindow" != "$terminal" ]
 then
 	count=$((count + 1))
 else
-	echo "Test1: Terminal did not open"
+	echo "Test1: Terminal open test fail"
 fi
 
 #Test2: Check exit button
@@ -46,10 +43,33 @@ if [ "$rootWindow" == "$window" ]
 then
 	count=$((count + 1))
 else
-	echo "Test2: Exit button not closing window"
+	echo "Test2: Exit button test fail"
 fi
 
-echo "$count /2"
+#Test3: Move window
+xdotool key alt+Return
+sleep 0.2
+xdotool mousemove 100 10
+xdotool mousedown 1
+xdotool mousemove 200 200
+xdotool mouseup 1
+output=$(xdotool getmouselocation)
+window=$(echo $output | awk '{print $4}' | cut -d":" -f2)
+output=$(xdotool getwindowgeometry $window)
+windowsize=$(echo $output | awk '{print $4}' | cut -d":" -f2)
+
+if [ "$windowsize" == "100,190" ]
+then
+	count=$((count + 1))
+else
+	echo "Test3: Moving window test fail"
+fi
+
+xdotool mousemove_relative -- -90 0
+xdotool click 1
+
+echo "$count /3 tests passed"
+
 
 sleep 500
 
