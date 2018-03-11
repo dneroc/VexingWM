@@ -227,6 +227,22 @@ fi
 xdotool mousemove 10 10
 xdotool click 1
 
+#Test11: Switch focus (title left mouse click)
+xdotool key alt+Return
+xdotool key alt+Return
+sleep 0.5
+xdotool mousemove 100 10
+xdotool mousedown 1
+#focus1=$(xdotool search --class xterm behave %@ focus getwindowpid)
+xdotool mousemove_relative 0 400
+xdotool mouseup 1
+xdotool mousemove 100 10
+xdotool click 1
+#focus2=$(xdotool search --class xterm behave %@ focus getwindowpid)
+
+echo $focus1
+echo $focus2
+
 echo "$count /10 tests passed"
 
 sleep 500
