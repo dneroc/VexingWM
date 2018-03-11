@@ -1,0 +1,108 @@
+#!/bin/bash
+
+
+xdotool mousemove 10 10
+xdotool click 1
+xdotool click 1
+xdotool click 1
+xdotool click 1
+xdotool click 1
+
+output=$(xdotool getmouselocation)
+rootWindow=$(echo $output | awk '{print $4}' | cut -d":" -f2) 
+
+
+
+#Alt+Up
+
+xdotool key alt+Return
+sleep 0.1
+xdotool mousemove 30 10
+xdotool click 1
+xdotool key alt+Up
+output=$(xdotool getmouselocation)
+window=$(echo $output | awk '{print $4}' | cut -d":" -f2)
+output=$(xdotool getwindowgeometry $window)
+windowSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+windowSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+echo $windowSizeX
+echo $windowSizeY
+output=$(xdotool getwindowgeometry $rootWindow)
+rootSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+rootSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+windowSizeX=$((windowSizeX + 4))
+windowSizeY=$((windowSizeY + 4))
+if [ $windowSizeX == $rootSizeX ] && [ $windowSizeY == $rootSizeY ]
+then
+        echo "Maximise test passed."	
+else
+	echo "Test1: Window resizing failed. Should be $rootSizeX x $rootSizeY, is: $windowSizeX x $windowSizeY"
+fi
+
+xdotool mousemove 10 10
+xdotool click 1
+
+sleep 0.1
+
+xdotool key alt+Return
+sleep 0.1
+xdotool mousemove 30 10
+xdotool click 1
+xdotool key alt+Left
+output=$(xdotool getmouselocation)
+window=$(echo $output | awk '{print $4}' | cut -d":" -f2)
+output=$(xdotool getwindowgeometry $window)
+windowSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+windowSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+echo $windowSizeX
+echo $windowSizeY
+output=$(xdotool getwindowgeometry $rootWindow)
+rootSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+rootSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+windowSizeX=$((windowSizeX))
+windowSizeY=$((windowSizeY + 4))
+halfRootX=$((rootSizeX / 2))
+halfRootY=$((rootSizeY / 2))
+if [ $windowSizeX == $halfRootX ] && [ $windowSizeY == $rootSizeY ]
+then
+        echo "Left Alt test passed."	
+else
+    echo "Test2: Window resizing failed. Should be $halfRootX x $rootSizeY, is: $windowSizeX x $windowSizeY"
+fi
+
+xdotool mousemove 10 10
+xdotool click 1
+
+
+
+sleep 0.1
+
+xdotool key alt+Return
+sleep 0.1
+xdotool mousemove 30 10
+xdotool click 1
+xdotool key alt+Right
+xdotool mousemove 750 30
+output=$(xdotool getmouselocation)
+window=$(echo $output | awk '{print $4}' | cut -d":" -f2)
+output=$(xdotool getwindowgeometry $window)
+windowSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+windowSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+echo $windowSizeX
+echo $windowSizeY
+output=$(xdotool getwindowgeometry $rootWindow)
+rootSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+rootSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+windowSizeX=$((windowSizeX+4))
+windowSizeY=$((windowSizeY + 4))
+halfRootX=$((rootSizeX / 2))
+halfRootY=$((rootSizeY / 2))
+if [ $windowSizeX == $halfRootX ] && [ $windowSizeY == $rootSizeY ]
+then
+        echo "Right Alt test passed."	
+else
+    echo "Test3: Window resizing failed. Should be $halfRootX x $rootSizeY, is: $windowSizeX x $windowSizeY"
+fi
+
+xdotool mousemove 405 10
+xdotool click 1
