@@ -57,12 +57,12 @@ windowLocation=$(echo $output | awk '{print $4}' | cut -d":" -f2)
 if [ "$windowLocation" == "100,190" ]
 then
 	count=$((count + 1))
-	xdotool mousemove_relative -- -90 0
-	xdotool click 1
 else
 	echo "Test3: Moving window test fail. Should be 100,190, is: $windowLocation"
 fi
 
+xdotool mousemove_relative -- -90 0
+xdotool click 1
 
 #Test4: Resize window (from exit button)
 xdotool key alt+Return
@@ -80,12 +80,13 @@ windowSize=$(echo $output | awk '{print $8}' | cut -d":" -f2)
 
 if [ "$windowSize" == "674x526" ]
 then
-	xdotool mousemove 10 10
-	xdotool click 1
 	count=$((count + 1))
 else
 	echo "Test4: Window resizing failed. Should be 674x526, is: $windowSize"
 fi
+
+xdotool mousemove 10 10
+xdotool click 1
 
 #Test5: Resize window (from maximise button)
 xdotool key alt+Return
@@ -103,12 +104,13 @@ windowSize=$(echo $output | awk '{print $8}' | cut -d":" -f2)
 
 if [ "$windowSize" == "654x526" ]
 then
-	xdotool mousemove 10 10
-	xdotool click 1
 	count=$((count + 1))
 else
 	echo "Test5: Window resizing failed. Should be 654x526, is: $windowSize"
 fi
+
+xdotool mousemove 10 10
+xdotool click 1
 
 #Test6: Resize window (from title bar)
 xdotool key alt+Return
@@ -126,12 +128,13 @@ windowSize=$(echo $output | awk '{print $8}' | cut -d":" -f2)
 
 if [ "$windowSize" == "584x526" ]
 then
-	xdotool mousemove 10 10
-	xdotool click 1
 	count=$((count + 1))
 else
 	echo "Test6: Window resizing failed. Should be 654x526, is: $windowSize"
 fi
+
+xdotool mousemove 10 10
+xdotool click 1
 
 #Test7: Resize window (from client window)
 xdotool key alt+Return
@@ -149,12 +152,13 @@ windowSize=$(echo $output | awk '{print $8}' | cut -d":" -f2)
 
 if [ "$windowSize" == "584x436" ]
 then
-	xdotool mousemove 10 10
-	xdotool click 1
 	count=$((count + 1))
 else
 	echo "Test7: Window resizing failed. Should be 654x526, is: $windowSize"
 fi
+
+xdotool mousemove 10 10
+xdotool click 1
 
 #Test8: Maximise button
 xdotool key alt+Return
@@ -164,19 +168,24 @@ xdotool click 1
 output=$(xdotool getmouselocation)
 window=$(echo $output | awk '{print $4}' | cut -d":" -f2)
 output=$(xdotool getwindowgeometry $window)
-windowSize=$(echo $output | awk '{print $8}' | cut -d":" -f2)
-echo $windowSize
+windowSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+windowSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+echo $windowSizeX
+echo $windowSizeY
 output=$(xdotool getwindowgeometry $rootWindow)
-rootSize=$(echo $output | awk '{print $8}' | cut -d":" -f2)
-
-if [ "$windowSize" == "$rootSize" ]
+rootSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
+rootSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+windowSizeX=$((windowSizeX + 4))
+windowSizeY=$((windowSizeY + 4))
+if [ $windowSizeX == $rootSizeX ] && [ $windowSizeY == $rootSizeY ]
 then
-	xdotool mousemove 10 10
-	xdotool click 1
 	count=$((count + 1))
 else
-	echo "Test8: Window resizing failed. Should be $rootSize, is: $windowSize"
+	echo "Test8: Window resizing failed. Should be $rootSizeX x $rootSizeY, is: $windowSizeX x $windowSizeY"
 fi
+
+xdotool mousemove 10 10
+xdotool click 1
 
 echo "$count /8 tests passed"
 
