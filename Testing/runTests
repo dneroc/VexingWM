@@ -1,0 +1,9 @@
+#!/bin/bash
+
+Xvfb :1 -screen 0 800x600x24 &
+THE_PID=$!
+DISPLAY=:1.0 ~/college/project/2018-CA326-dcraig-XWindowManager/code/a.out &
+sleep 3
+DISPLAY=:1.0 ./automatedTesting 
+kill -15 $THE_PID
+
