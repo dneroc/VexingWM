@@ -204,25 +204,32 @@ if [ $window != $dmenu ]
 then
 	count=$((count + 1))
 else
-	echo "Test8: Open dmenu failed. Background window: $window should not equal dmenu window: $dmenu "
+	echo "Test9: Open dmenu failed. Background window: $window should not equal dmenu window: $dmenu "
 fi
 
 xdotool key Return
 
-echo "$count /9 tests passed"
+#Test10: Open program from dmenu
+xdotool key alt+F2
+sleep 0.5
+xdotool type firefox
+xdotool key Return
+sleep 2
+output=$(xdotool search --class firefox)
+
+if [ -z "$output" ]
+then
+	echo "Test10: Open program from dmenu failed. Firefox not open"
+else
+	count=$((count + 1))
+fi
+
+xdotool mousemove 10 10
+xdotool click 1
+
+echo "$count /10 tests passed"
 
 sleep 500
-
-#Open Dmenu and firefox
-xdotool key alt+F2
-sleep 1
-xdotool type 'firefox'
-sleep 0.5
-xdotool key Return
-sleep 3
-xdotool mousemove 10 10
-sleep 1
-xdotool click 1
 
 #Alt tab switch
 xdotool key alt+Return
@@ -232,33 +239,3 @@ sleep 5
 xdotool key alt+Return
 sleep 5
 xdotool key alt+Tab
-
-
-
-#Open and resize terminal on client
-xdotool key alt+Return
-sleep 0.5
-xdotool mousemove 100 100
-sleep 0.5 
-xdotool keydown alt
-xdotool mousedown 3
-xdotool mousemove 300 300
-sleep 0.5
-xdotool keyup alt
-xdotool mouseup 3
-xdotool mousemove 10 10
-sleep 0.5
-xdotool click 1
-
-
-#Open and maximise terminal
-xdotool key alt+Return
-sleep 0.5
-xdotool mousemove 30 10
-xdotool click 1
-sleep 0.5
-xdotool mousemove 10 10
-sleep 0.5
-xdotool click 1
-
-
