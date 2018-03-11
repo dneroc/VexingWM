@@ -29,7 +29,12 @@ else
 	echo "Test1: Terminal open test fail"
 fi
 
+xdotool mousemove 10 10
+xdotool click 1
+
 #Test2: Exit button
+xdotool key alt+Return
+sleep 0.2
 xdotool mousemove 10 10
 xdotool click 1
 xdotool mousemove 100 10
@@ -170,11 +175,10 @@ window=$(echo $output | awk '{print $4}' | cut -d":" -f2)
 output=$(xdotool getwindowgeometry $window)
 windowSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
 windowSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
-echo $windowSizeX
-echo $windowSizeY
 output=$(xdotool getwindowgeometry $rootWindow)
 rootSizeX=$(echo $output | awk '{print $8}' | cut -d"x" -f1)
 rootSizeY=$(echo $output | awk '{print $8}' | cut -d"x" -f2)
+#Border is size 4 so window is 4 less than the root
 windowSizeX=$((windowSizeX + 4))
 windowSizeY=$((windowSizeY + 4))
 if [ $windowSizeX == $rootSizeX ] && [ $windowSizeY == $rootSizeY ]
@@ -187,7 +191,25 @@ fi
 xdotool mousemove 10 10
 xdotool click 1
 
-echo "$count /8 tests passed"
+#Test9: Open Dmenu
+xdotool mousemove 5 5
+output=$(xdotool getmouselocation)
+window=$(echo $output | awk '{print $4}' | cut -d":" -f2)
+xdotool key alt+F2
+sleep 0.2
+output=$(xdotool getmouselocation)
+dmenu=$(echo $output | awk '{print $4}' | cut -d":" -f2)
+
+if [ $window != $dmenu ]
+then
+	count=$((count + 1))
+else
+	echo "Test8: Open dmenu failed. Background window: $window should not equal dmenu window: $dmenu "
+fi
+
+xdotool key Return
+
+echo "$count /9 tests passed"
 
 sleep 500
 
