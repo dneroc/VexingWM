@@ -46,11 +46,11 @@ void setFrameMasks(Window window, Window frame, Window title, Window exitButton,
 	PointerMotionMask|FocusChangeMask,
  	GrabModeAsync, GrabModeAsync, None, None);
 
-/*	//Event for clicking client window
-	XGrabButton(disp, 1, AnyModifier, window, 
+	//Event for clicking client window
+	XGrabButton(disp, 1, Mod1Mask, window, 
 	True, ButtonPressMask|ButtonReleaseMask|
 	PointerMotionMask|FocusChangeMask,
-	GrabModeAsync, GrabModeAsync, None, None);*/
+	GrabModeAsync, GrabModeAsync, None, None);
 
 	//Alt + F4 event (for closing windows)
 	XGrabKey(disp, XKeysymToKeycode(disp, XK_F4), 
@@ -234,10 +234,9 @@ void reparentWindow(Window window){
 void handleMapRequest(XMapRequestEvent ev){
 	
 	//Reparents window that sent map request
-
 	reparentWindow(ev.window);
 	cout << "Window reparented" << endl;
-
+	
 	//Remaps the child window (3rd child of frame)
 	XMapWindow(disp, ev.window);
 	cout << "Client mapped" << endl;
@@ -370,7 +369,6 @@ void handleButton(XButtonEvent ev) {
 		Window frame = clients[ev.window];
 		XRaiseWindow (disp, frame);
 		XSetInputFocus(disp, ev.window, RevertToPointerRoot, CurrentTime);
-		XFlush(disp);
 	}
 }
 
@@ -407,11 +405,6 @@ void handleKey(XKeyEvent ev) {
 			cout << "Window switch start" << endl;
 			//Child 0 is the next frame of the root window
 			XRaiseWindow(disp, child[0]);
-			cout << "Set children" << endl;
-			//Sets the title, buttons, client
-			//setChildren(child[0]);
-			cout << "Set focus" << endl;
-			//XSetInputFocus(disp, client, RevertToPointerRoot, CurrentTime);
 			cout << "End tab switch" << endl;
 		}	
     }
@@ -452,6 +445,10 @@ void handleKey(XKeyEvent ev) {
 	}
 }
 
+void handleCreate(XCreateWindowEvent ev){
+	cout << "Create notify" << endl;
+}
+
 //Event loop for intercepting different types of events
 void eventLoop()
 {
@@ -480,6 +477,9 @@ void eventLoop()
 
 		case MotionNotify: 		
 			handleMotion(ev.xmotion); break;
+
+		case CreateNotify:
+			handleCreate(ev.xcreatewindow); break;
 
 	}
 }
